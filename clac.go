@@ -98,13 +98,6 @@ func (c *Clac) Redo() error {
 	return nil
 }
 
-// Clear clears the stack.
-func (c *Clac) Clear() error {
-	c.hist.push(Stack{})
-	c.updateWorking()
-	return nil
-}
-
 func (c *Clac) beginCmd() {
 	c.updateWorking()
 }
@@ -170,4 +163,29 @@ func (c *Clac) vals(pos, num int) (Stack, error) {
 		return nil, err
 	}
 	return c.working[start : end+1], nil
+}
+
+func (c *Clac) dup(pos, num int) error {
+	vals, err := c.vals(pos, num)
+	if err != nil {
+		return err
+	}
+	return c.insert(vals, 0)
+}
+
+func (c *Clac) drop(pos, num int) error {
+	_, err := c.remove(pos, num)
+	return err
+}
+
+func (c *Clac) rot(pos, num int, isDown bool) error {
+	from, to := pos, 0
+	if !isDown {
+		from, to = 0, pos-num+1
+	}
+	vals, err := c.remove(from, num)
+	if err != nil {
+		return err
+	}
+	return c.insert(vals, to)
 }

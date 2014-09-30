@@ -5,17 +5,21 @@ import "math"
 // x is the last value on the stack.
 // y is the penultimate value on the stack.
 
+// Clear clears the stack.
+func (c *Clac) Clear() error {
+	if len(c.hist.stack()) > 0 {
+		c.hist.push(Stack{})
+		c.updateWorking()
+	}
+	return nil
+}
+
 // Push pushes a value on the stack.
 func (c *Clac) Push(x float64) (err error) {
 	c.beginCmd()
 	defer func() { c.endCmd(err) }()
 
 	return c.push(x)
-}
-
-func (c *Clac) drop(pos, num int) error {
-	_, err := c.remove(pos, num)
-	return err
 }
 
 // Drop drops the last value from the stack.
@@ -52,14 +56,6 @@ func (c *Clac) Dropr() (err error) {
 		return
 	}
 	return c.drop(int(pos), int(num))
-}
-
-func (c *Clac) dup(pos, num int) error {
-	vals, err := c.vals(pos, num)
-	if err != nil {
-		return err
-	}
-	return c.insert(vals, 0)
 }
 
 // Dup duplicates the last value on the stack.
@@ -108,18 +104,6 @@ func (c *Clac) Pick() (err error) {
 		return
 	}
 	return c.dup(int(pos), 1)
-}
-
-func (c *Clac) rot(pos, num int, isDown bool) error {
-	from, to := pos, 0
-	if !isDown {
-		from, to = 0, pos-num+1
-	}
-	vals, err := c.remove(from, num)
-	if err != nil {
-		return err
-	}
-	return c.insert(vals, to)
 }
 
 // Rot rotates the value on the stack at index x up or down.
