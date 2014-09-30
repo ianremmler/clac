@@ -299,14 +299,14 @@ func (c *Clac) Ln() error {
 	})
 }
 
-// Lg returns the base 2 logorithm of x.
+// Lg returns the base 2 logarithm of x.
 func (c *Clac) Lg() error {
 	return c.applyFloat(1, func(x []float64) (float64, error) {
 		return math.Log2(x[0]), nil
 	})
 }
 
-// Log returns the base 10 logorithm of x.
+// Log returns the base 10 logarithm of x.
 func (c *Clac) Log() error {
 	return c.applyFloat(1, func(x []float64) (float64, error) {
 		return math.Log10(x[0]), nil
@@ -432,7 +432,7 @@ func (c *Clac) Ceil() error {
 	})
 }
 
-// Trunc returns x truncates to the nearest integer toward 0.
+// Trunc returns x truncated to the nearest integer toward 0.
 func (c *Clac) Trunc() error {
 	return c.applyFloat(1, func(x []float64) (float64, error) {
 		return math.Trunc(x[0]), nil
