@@ -117,7 +117,9 @@ func main() {
 		if err != nil {
 			continue
 		}
-		lnr.AppendHistory(input)
+		if strings.TrimSpace(input) != "" {
+			lnr.AppendHistory(input)
+		}
 		parseInput(input)
 		fmt.Println()
 	}
