@@ -8,11 +8,10 @@ import (
 )
 
 var (
-	tooFewArgsErr = errors.New("too few arguments")
-	invalidArgErr = errors.New("invalid argument")
-	outOfRangeErr = errors.New("argument out of range")
-	noMoreUndoErr = errors.New("no more changes to undo")
-	noMoreRedoErr = errors.New("no more changes to redo")
+	tooFewArgsErr    = errors.New("too few arguments")
+	invalidArgErr    = errors.New("invalid argument")
+	outOfRangeErr    = errors.New("argument out of range")
+	noMoreChangesErr = errors.New("no more changes")
 )
 
 // ParseNum parses a string for an integer or floating point number.
@@ -83,7 +82,7 @@ func (c *Clac) Stack() Stack {
 // Undo undoes the last operation.
 func (c *Clac) Undo() error {
 	if !c.hist.undo() {
-		return noMoreUndoErr
+		return noMoreChangesErr
 	}
 	c.updateWorking()
 	return nil
@@ -92,7 +91,7 @@ func (c *Clac) Undo() error {
 // Redo redoes the last undone operation.
 func (c *Clac) Redo() error {
 	if !c.hist.redo() {
-		return noMoreRedoErr
+		return noMoreChangesErr
 	}
 	c.updateWorking()
 	return nil

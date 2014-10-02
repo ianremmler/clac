@@ -13,10 +13,12 @@ import (
 	"strings"
 
 	"github.com/ianremmler/clac"
+	"github.com/kless/term"
 	"github.com/peterh/liner"
 )
 
 var (
+	trm     *term.Terminal
 	lnr     *liner.State
 	cl      = clac.New()
 	cmdList = []string{}
@@ -98,6 +100,14 @@ func main() {
 		os.Exit(0)
 	}
 
+	if !term.SupportANSI() {
+		log.Fatalln("terminal does not support ANSI codes.")
+	}
+	var err error
+	trm, err = term.New()
+	if err != nil {
+		log.Fatalln(err)
+	}
 	lnr = liner.NewLiner()
 	lnr.SetWordCompleter(complete)
 
@@ -142,7 +152,7 @@ func exit() {
 }
 
 func help() {
-	fmt.Println()
+	clearScreen()
 	for i := range cmdList {
 		fmt.Printf("%-8s", cmdList[i])
 		if (i+1)%5 == 0 {
@@ -153,8 +163,7 @@ func help() {
 		fmt.Println()
 	}
 	fmt.Print("\n[Press any key to continue]")
-	bufio.NewReader(os.Stdin).ReadByte()
-	fmt.Println()
+	waitKey()
 }
 
 func parseInput(input string) {
@@ -171,16 +180,19 @@ func parseInput(input string) {
 		if err == nil {
 			if err = cl.Push(num); err != nil {
 				log.Println(tok+":", err)
+				waitKey()
 			}
 			continue
 		}
 		if cmd, ok := cmdMap[tok]; ok {
 			if err = cmd(); err != nil {
 				log.Println(tok+":", err)
+				waitKey()
 			}
 			continue
 		}
 		log.Println(tok + ": invalid input")
+		waitKey()
 	}
 }
 
@@ -201,12 +213,29 @@ func complete(in string, pos int) (string, []string, string) {
 }
 
 func printStack(stack clac.Stack) {
-	for i := len(stack) - 1; i >= 0; i-- {
-		fmt.Printf("%2d: %16.10g", i, stack[i])
-		if math.Abs(stack[i]) < math.MaxInt64 {
-			fmt.Printf(" %#19x", int64(stack[i]))
+	numRows, _, err := trm.GetSize()
+	if err != nil {
+		numRows = len(stack) + 1
+	}
+	clearScreen()
+
+	for i := numRows - 3; i >= 0; i-- {
+		fmt.Printf("%2d:", i)
+		if i < len(stack) {
+			fmt.Printf("%16.10g", stack[i])
+			if math.Abs(stack[i]) < math.MaxInt64 {
+				fmt.Printf(" %#19x", int64(stack[i]))
+			}
 		}
 		fmt.Println()
 	}
 	fmt.Println(strings.Repeat("-", 40))
+}
+
+func clearScreen() {
+	fmt.Print("\033[2J\033[H")
+}
+
+func waitKey() {
+	bufio.NewReader(os.Stdin).ReadByte()
 }
