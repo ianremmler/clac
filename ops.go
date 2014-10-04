@@ -404,17 +404,17 @@ func (c *Clac) Atan2() error {
 	})
 }
 
-// D2R converts a value in degrees to radians.
-func (c *Clac) D2R() error {
+// DegToRad converts a value in degrees to radians.
+func (c *Clac) DegToRad() error {
 	return c.applyFloat(1, func(x []float64) (float64, error) {
-		return x[0] * 180 / math.Pi, nil
+		return x[0] * math.Pi / 180, nil
 	})
 }
 
-// R2D converts a value in radians to degrees.
-func (c *Clac) R2D() error {
+// RadToDeg converts a value in radians to degrees.
+func (c *Clac) RadToDeg() error {
 	return c.applyFloat(1, func(x []float64) (float64, error) {
-		return x[0] * math.Pi / 180, nil
+		return x[0] * 180 / math.Pi, nil
 	})
 }
 
