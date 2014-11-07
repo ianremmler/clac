@@ -95,7 +95,7 @@ func init() {
 }
 
 func main() {
-	if processPipe() {
+	if processCmdLine() {
 		fmt.Println(strings.Trim(fmt.Sprint(cl.Stack()), "[]"))
 		os.Exit(0)
 	}
@@ -135,12 +135,19 @@ func main() {
 	}
 }
 
-func processPipe() bool {
+func processCmdLine() bool {
+	input := ""
 	if stat, err := os.Stdin.Stat(); err == nil && stat.Mode()&os.ModeNamedPipe != 0 {
-		if input, err := ioutil.ReadAll(os.Stdin); err == nil {
-			parseInput(string(input))
-			return true
+		if pipeInput, err := ioutil.ReadAll(os.Stdin); err == nil {
+			input = string(pipeInput)
 		}
+	}
+	if len(os.Args) > 1 {
+		input += " " + strings.Join(os.Args[1:], " ")
+	}
+	if input != "" {
+		parseInput(string(input))
+		return true
 	}
 	return false
 }
