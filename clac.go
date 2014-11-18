@@ -97,6 +97,13 @@ func (c *Clac) Redo() error {
 	return nil
 }
 
+func (c *Clac) Exec(f func() error) error {
+	c.beginCmd()
+	err := f()
+	c.endCmd(err)
+	return err
+}
+
 func (c *Clac) beginCmd() {
 	c.updateWorking()
 }

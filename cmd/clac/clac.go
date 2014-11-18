@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -62,6 +63,8 @@ var (
 		"or":     cl.Or,
 		"xor":    cl.Xor,
 		"not":    cl.Not,
+		"sum":    cl.Sum,
+		"avg":    cl.Avg,
 		"clear":  cl.Clear,
 		"drop":   cl.Drop,
 		"dropn":  cl.Dropn,
@@ -71,6 +74,7 @@ var (
 		"dupr":   cl.Dupr,
 		"pick":   cl.Pick,
 		"swap":   cl.Swap,
+		"depth":  cl.Depth,
 		"undo":   cl.Undo,
 		"redo":   cl.Redo,
 		"rot":    func() error { return cl.Rot(true) },
@@ -137,7 +141,7 @@ func main() {
 		if strings.TrimSpace(input) != "" {
 			lnr.AppendHistory(input)
 		}
-		parseInput(input)
+		parseInput(input, func(err error) { log.Println(err); waitKey() })
 		fmt.Println()
 	}
 }
@@ -153,7 +157,7 @@ func processCmdLine() bool {
 		input += " " + strings.Join(os.Args[1:], " ")
 	}
 	if input != "" {
-		parseInput(string(input))
+		parseInput(string(input), func(err error) { log.Println(err) })
 		return true
 	}
 	return false
@@ -180,33 +184,30 @@ func help() {
 	waitKey()
 }
 
-func parseInput(input string) {
+func parseInput(input string, errorHandler func(err error)) {
 	cmdReader := strings.NewReader(input)
 	for {
 		tok := ""
 		if _, err := fmt.Fscan(cmdReader, &tok); err != nil {
 			if err != io.EOF {
-				log.Println(err)
+				errorHandler(err)
 			}
 			break
 		}
 		num, err := clac.ParseNum(tok)
 		if err == nil {
-			if err = cl.Push(num); err != nil {
-				log.Println(tok+":", err)
-				waitKey()
+			if err = cl.Exec(func() error { return cl.Push(num) }); err != nil {
+				errorHandler(errors.New("push: " + err.Error()))
 			}
 			continue
 		}
 		if cmd, ok := cmdMap[tok]; ok {
-			if err = cmd(); err != nil {
-				log.Println(tok+":", err)
-				waitKey()
+			if err = cl.Exec(cmd); err != nil {
+				errorHandler(errors.New(tok + ": " + err.Error()))
 			}
 			continue
 		}
-		log.Println(tok + ": invalid input")
-		waitKey()
+		errorHandler(errors.New(tok + ": invalid input"))
 	}
 }
 

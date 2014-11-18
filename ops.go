@@ -15,147 +15,116 @@ func (c *Clac) Clear() error {
 }
 
 // Push pushes a value on the stack.
-func (c *Clac) Push(x float64) (err error) {
-	c.beginCmd()
-	defer func() { c.endCmd(err) }()
-
+func (c *Clac) Push(x float64) error {
 	return c.push(x)
 }
 
 // Drop drops the last value from the stack.
-func (c *Clac) Drop() (err error) {
-	c.beginCmd()
-	defer func() { c.endCmd(err) }()
-
+func (c *Clac) Drop() error {
 	return c.drop(0, 1)
 }
 
 // Dropn drops the last x values from the stack.
-func (c *Clac) Dropn() (err error) {
-	c.beginCmd()
-	defer func() { c.endCmd(err) }()
-
+func (c *Clac) Dropn() error {
 	num, err := c.pop()
 	if err != nil {
-		return
+		return err
 	}
 	return c.drop(0, int(num))
 }
 
 // Dropr drops a range of x values from the stack, starting at index y.
-func (c *Clac) Dropr() (err error) {
-	c.beginCmd()
-	defer func() { c.endCmd(err) }()
-
+func (c *Clac) Dropr() error {
 	num, err := c.pop()
 	if err != nil {
-		return
+		return err
 	}
 	pos, err := c.pop()
 	if err != nil {
-		return
+		return err
 	}
 	return c.drop(int(pos), int(num))
 }
 
 // Dup duplicates the last value on the stack.
-func (c *Clac) Dup() (err error) {
-	c.beginCmd()
-	defer func() { c.endCmd(err) }()
-
+func (c *Clac) Dup() error {
 	return c.dup(0, 1)
 }
 
 // Dupn duplicates the last x values on the stack.
-func (c *Clac) Dupn() (err error) {
-	c.beginCmd()
-	defer func() { c.endCmd(err) }()
-
+func (c *Clac) Dupn() error {
 	num, err := c.pop()
 	if err != nil {
-		return
+		return err
 	}
 	return c.dup(0, int(num))
 }
 
 // Dupr duplicates a range of x values on the stack, starting at index y.
-func (c *Clac) Dupr() (err error) {
-	c.beginCmd()
-	defer func() { c.endCmd(err) }()
-
+func (c *Clac) Dupr() error {
 	num, err := c.pop()
 	if err != nil {
-		return
+		return err
 	}
 	pos, err := c.pop()
 	if err != nil {
-		return
+		return err
 	}
 	return c.dup(int(pos), int(num))
 }
 
 // Pick duplicates the value on the stack at index x.
-func (c *Clac) Pick() (err error) {
-	c.beginCmd()
-	defer func() { c.endCmd(err) }()
-
+func (c *Clac) Pick() error {
 	pos, err := c.pop()
 	if err != nil {
-		return
+		return err
 	}
 	return c.dup(int(pos), 1)
 }
 
 // Rot rotates the value on the stack at index x up or down.
-func (c *Clac) Rot(isDown bool) (err error) {
-	c.beginCmd()
-	defer func() { c.endCmd(err) }()
-
+func (c *Clac) Rot(isDown bool) error {
 	pos, err := c.pop()
 	if err != nil {
-		return
+		return err
 	}
 	return c.rot(int(pos), 1, isDown)
 }
 
 // Rotr rotates a range of x values on the stack, starting at index y, up or down.
-func (c *Clac) Rotr(isDown bool) (err error) {
-	c.beginCmd()
-	defer func() { c.endCmd(err) }()
-
+func (c *Clac) Rotr(isDown bool) error {
 	num, err := c.pop()
 	if err != nil {
-		return
+		return err
 	}
 	pos, err := c.pop()
 	if err != nil {
-		return
+		return err
 	}
 	return c.rot(int(pos), int(num), isDown)
 }
 
 // Swap swaps the last two values on the stack.
-func (c *Clac) Swap() (err error) {
-	c.beginCmd()
-	defer func() { c.endCmd(err) }()
-
+func (c *Clac) Swap() error {
 	return c.rot(1, 1, true)
+}
+
+// Depth returns the number of values on the stack
+func (c *Clac) Depth() error {
+	return c.push(float64(len(c.Stack())))
 }
 
 // FloatFunc represents a floating point function.
 type FloatFunc func(x []float64) (float64, error)
 
-func (c *Clac) applyFloat(arity int, f FloatFunc) (err error) {
-	c.beginCmd()
-	defer func() { c.endCmd(err) }()
-
+func (c *Clac) applyFloat(arity int, f FloatFunc) error {
 	vals, err := c.remove(0, arity)
 	if err != nil {
 		return tooFewArgsErr
 	}
 	res, err := f(vals)
 	if err != nil {
-		return
+		return err
 	}
 	if math.IsNaN(res) {
 		return invalidArgErr
@@ -166,10 +135,7 @@ func (c *Clac) applyFloat(arity int, f FloatFunc) (err error) {
 // IntFunc represents an integer function
 type IntFunc func(x []int64) (int64, error)
 
-func (c *Clac) applyInt(arity int, f IntFunc) (err error) {
-	c.beginCmd()
-	defer func() { c.endCmd(err) }()
-
+func (c *Clac) applyInt(arity int, f IntFunc) error {
 	vals, err := c.remove(0, arity)
 	if err != nil {
 		return tooFewArgsErr
@@ -183,7 +149,7 @@ func (c *Clac) applyInt(arity int, f IntFunc) (err error) {
 	}
 	res, err := f(ivals)
 	if err != nil {
-		return
+		return err
 	}
 	return c.push(float64(res))
 }
@@ -464,5 +430,41 @@ func (c *Clac) Xor() error {
 func (c *Clac) Not() error {
 	return c.applyInt(1, func(x []int64) (int64, error) {
 		return ^x[0], nil
+	})
+}
+
+func sum(vals []float64) float64 {
+	sum := 0.0
+	for _, x := range vals {
+		sum += x
+	}
+	return sum
+}
+
+// Sum returns the sum of the last x values on the stack
+func (c *Clac) Sum() error {
+	num, err := c.pop()
+	if err != nil {
+		return err
+	}
+	if num < 1 {
+		return outOfRangeErr
+	}
+	return c.applyFloat(int(num), func(x []float64) (float64, error) {
+		return sum(x), nil
+	})
+}
+
+// Avg returns the mean of the last x values on the stack
+func (c *Clac) Avg() error {
+	num, err := c.pop()
+	if err != nil {
+		return err
+	}
+	if num < 1 {
+		return outOfRangeErr
+	}
+	return c.applyFloat(int(num), func(x []float64) (float64, error) {
+		return sum(x) / math.Floor(num), nil
 	})
 }
