@@ -96,7 +96,14 @@ func init() {
 
 func main() {
 	if processCmdLine() {
-		fmt.Println(strings.Trim(fmt.Sprint(cl.Stack()), "[]"))
+		stack := cl.Stack()
+		for i := range stack {
+			fmt.Print(stack[len(stack)-i-1])
+			if i < len(stack)-1 {
+				fmt.Print(" ")
+			}
+		}
+		fmt.Println()
 		os.Exit(0)
 	}
 
