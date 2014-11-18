@@ -184,7 +184,7 @@ func (c *Clac) drop(pos, num int) error {
 	return err
 }
 
-func (c *Clac) rot(pos, num int, isDown bool) error {
+func (c *Clac) rotate(pos, num int, isDown bool) error {
 	from, to := pos, 0
 	if !isDown {
 		from, to = 0, pos-num+1

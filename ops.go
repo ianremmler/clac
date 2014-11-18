@@ -82,17 +82,35 @@ func (c *Clac) Pick() error {
 	return c.dup(int(pos), 1)
 }
 
-// Rot rotates the value on the stack at index x up or down.
-func (c *Clac) Rot(isDown bool) error {
+// Rot rotates the value on the stack at index x down.
+func (c *Clac) Rot() error {
+	return c.rot(true)
+}
+
+// Unrot rotates the value on the stack at index x up.
+func (c *Clac) Unrot() error {
+	return c.rot(false)
+}
+
+func (c *Clac) rot(isDown bool) error {
 	pos, err := c.pop()
 	if err != nil {
 		return err
 	}
-	return c.rot(int(pos), 1, isDown)
+	return c.rotate(int(pos), 1, isDown)
 }
 
-// Rotr rotates a range of x values on the stack, starting at index y, up or down.
-func (c *Clac) Rotr(isDown bool) error {
+// Rotr rotates a range of x values on the stack, starting at index y, down.
+func (c *Clac) Rotr() error {
+	return c.rotr(true)
+}
+
+// Unrotr rotates a range of x values on the stack, starting at index y, up.
+func (c *Clac) Unrotr() error {
+	return c.rotr(false)
+}
+
+func (c *Clac) rotr(isDown bool) error {
 	num, err := c.pop()
 	if err != nil {
 		return err
@@ -101,12 +119,12 @@ func (c *Clac) Rotr(isDown bool) error {
 	if err != nil {
 		return err
 	}
-	return c.rot(int(pos), int(num), isDown)
+	return c.rotate(int(pos), int(num), isDown)
 }
 
 // Swap swaps the last two values on the stack.
 func (c *Clac) Swap() error {
-	return c.rot(1, 1, true)
+	return c.rotate(1, 1, true)
 }
 
 // Depth returns the number of values on the stack
@@ -115,7 +133,7 @@ func (c *Clac) Depth() error {
 }
 
 // FloatFunc represents a floating point function.
-type FloatFunc func(x []float64) (float64, error)
+type FloatFunc func(vals []float64) (float64, error)
 
 func (c *Clac) applyFloat(arity int, f FloatFunc) error {
 	vals, err := c.remove(0, arity)
@@ -133,7 +151,7 @@ func (c *Clac) applyFloat(arity int, f FloatFunc) error {
 }
 
 // IntFunc represents an integer function
-type IntFunc func(x []int64) (int64, error)
+type IntFunc func(vals []int64) (int64, error)
 
 func (c *Clac) applyInt(arity int, f IntFunc) error {
 	vals, err := c.remove(0, arity)
@@ -156,315 +174,356 @@ func (c *Clac) applyInt(arity int, f IntFunc) error {
 
 // Neg returns the negation of x.
 func (c *Clac) Neg() error {
-	return c.applyFloat(1, func(x []float64) (float64, error) {
-		return -x[0], nil
+	return c.applyFloat(1, func(vals []float64) (float64, error) {
+		return -vals[0], nil
 	})
 }
 
 // Abs returns the absolute value of x.
 func (c *Clac) Abs() error {
-	return c.applyFloat(1, func(x []float64) (float64, error) {
-		return math.Abs(x[0]), nil
+	return c.applyFloat(1, func(vals []float64) (float64, error) {
+		return math.Abs(vals[0]), nil
 	})
 }
 
 // Inv returns the inverse of x.
 func (c *Clac) Inv() error {
-	return c.applyFloat(1, func(x []float64) (float64, error) {
-		if x[0] == 0 {
+	return c.applyFloat(1, func(vals []float64) (float64, error) {
+		if vals[0] == 0 {
 			return 0, invalidArgErr
 		}
-		return 1 / x[0], nil
+		return 1 / vals[0], nil
 	})
 }
 
 // Add returns the sum of y and x.
 func (c *Clac) Add() error {
-	return c.applyFloat(2, func(x []float64) (float64, error) {
-		return x[1] + x[0], nil
+	return c.applyFloat(2, func(vals []float64) (float64, error) {
+		return vals[1] + vals[0], nil
 	})
 }
 
 // Sub returns the difference of y and x.
 func (c *Clac) Sub() error {
-	return c.applyFloat(2, func(x []float64) (float64, error) {
-		return x[1] - x[0], nil
+	return c.applyFloat(2, func(vals []float64) (float64, error) {
+		return vals[1] - vals[0], nil
 	})
 }
 
 // Mul returns the product of y and x.
 func (c *Clac) Mul() error {
-	return c.applyFloat(2, func(x []float64) (float64, error) {
-		return x[1] * x[0], nil
+	return c.applyFloat(2, func(vals []float64) (float64, error) {
+		return vals[1] * vals[0], nil
 	})
 }
 
 // Div returns the quotient of y divided by x.
 func (c *Clac) Div() error {
-	return c.applyFloat(2, func(x []float64) (float64, error) {
-		if x[0] == 0 {
+	return c.applyFloat(2, func(vals []float64) (float64, error) {
+		if vals[0] == 0 {
 			return 0, invalidArgErr
 		}
-		return x[1] / x[0], nil
+		return vals[1] / vals[0], nil
 	})
 }
 
 // Mod returns the remainder of y divided by x.
 func (c *Clac) Mod() error {
-	return c.applyFloat(2, func(x []float64) (float64, error) {
-		return math.Mod(x[1], x[0]), nil
+	return c.applyFloat(2, func(vals []float64) (float64, error) {
+		return math.Mod(vals[1], vals[0]), nil
 	})
 }
 
 // Pow returns y to the x power.
 func (c *Clac) Pow() error {
-	return c.applyFloat(2, func(x []float64) (float64, error) {
-		return math.Pow(x[1], x[0]), nil
+	return c.applyFloat(2, func(vals []float64) (float64, error) {
+		return math.Pow(vals[1], vals[0]), nil
 	})
 }
 
 // Sqrt returns the square root of x.
 func (c *Clac) Sqrt() error {
-	return c.applyFloat(1, func(x []float64) (float64, error) {
-		return math.Sqrt(x[0]), nil
+	return c.applyFloat(1, func(vals []float64) (float64, error) {
+		return math.Sqrt(vals[0]), nil
 	})
 }
 
 // Hypot returns the square root of x squared + y squared.
 func (c *Clac) Hypot() error {
-	return c.applyFloat(2, func(x []float64) (float64, error) {
-		return math.Hypot(x[1], x[0]), nil
+	return c.applyFloat(2, func(vals []float64) (float64, error) {
+		return math.Hypot(vals[1], vals[0]), nil
 	})
 }
 
 // Exp returns e to the power of x.
 func (c *Clac) Exp() error {
-	return c.applyFloat(1, func(x []float64) (float64, error) {
-		return math.Exp(x[0]), nil
+	return c.applyFloat(1, func(vals []float64) (float64, error) {
+		return math.Exp(vals[0]), nil
 	})
 }
 
 // Pow2 returns 2 to the power of x.
 func (c *Clac) Pow2() error {
-	return c.applyFloat(1, func(x []float64) (float64, error) {
-		return math.Exp2(x[0]), nil
+	return c.applyFloat(1, func(vals []float64) (float64, error) {
+		return math.Exp2(vals[0]), nil
 	})
 }
 
 // Pow10 returns 10 to the power of x.
 func (c *Clac) Pow10() error {
-	return c.applyFloat(1, func(x []float64) (float64, error) {
-		return math.Pow(10, x[0]), nil
+	return c.applyFloat(1, func(vals []float64) (float64, error) {
+		return math.Pow(10, vals[0]), nil
 	})
 }
 
 // Ln returns the natural log of x.
 func (c *Clac) Ln() error {
-	return c.applyFloat(1, func(x []float64) (float64, error) {
-		return math.Log(x[0]), nil
+	return c.applyFloat(1, func(vals []float64) (float64, error) {
+		return math.Log(vals[0]), nil
 	})
 }
 
 // Lg returns the base 2 logarithm of x.
 func (c *Clac) Lg() error {
-	return c.applyFloat(1, func(x []float64) (float64, error) {
-		return math.Log2(x[0]), nil
+	return c.applyFloat(1, func(vals []float64) (float64, error) {
+		return math.Log2(vals[0]), nil
 	})
 }
 
 // Log returns the base 10 logarithm of x.
 func (c *Clac) Log() error {
-	return c.applyFloat(1, func(x []float64) (float64, error) {
-		return math.Log10(x[0]), nil
+	return c.applyFloat(1, func(vals []float64) (float64, error) {
+		return math.Log10(vals[0]), nil
 	})
 }
 
 // Sin returns the sine of x.
 func (c *Clac) Sin() error {
-	return c.applyFloat(1, func(x []float64) (float64, error) {
-		return math.Sin(x[0]), nil
+	return c.applyFloat(1, func(vals []float64) (float64, error) {
+		return math.Sin(vals[0]), nil
 	})
 }
 
 // Cos returns the cosine of x.
 func (c *Clac) Cos() error {
-	return c.applyFloat(1, func(x []float64) (float64, error) {
-		return math.Cos(x[0]), nil
+	return c.applyFloat(1, func(vals []float64) (float64, error) {
+		return math.Cos(vals[0]), nil
 	})
 }
 
 // Tan returns the tangent of x.
 func (c *Clac) Tan() error {
-	return c.applyFloat(1, func(x []float64) (float64, error) {
-		return math.Tan(x[0]), nil
+	return c.applyFloat(1, func(vals []float64) (float64, error) {
+		return math.Tan(vals[0]), nil
 	})
 }
 
 // Sinh returns the hyperbolic sine of x.
 func (c *Clac) Sinh() error {
-	return c.applyFloat(1, func(x []float64) (float64, error) {
-		return math.Sinh(x[0]), nil
+	return c.applyFloat(1, func(vals []float64) (float64, error) {
+		return math.Sinh(vals[0]), nil
 	})
 }
 
 // Cosh returns the hyperbolic cosine of x.
 func (c *Clac) Cosh() error {
-	return c.applyFloat(1, func(x []float64) (float64, error) {
-		return math.Cosh(x[0]), nil
+	return c.applyFloat(1, func(vals []float64) (float64, error) {
+		return math.Cosh(vals[0]), nil
 	})
 }
 
 // Tanh returns the hyperbolic tangent of x.
 func (c *Clac) Tanh() error {
-	return c.applyFloat(1, func(x []float64) (float64, error) {
-		return math.Tanh(x[0]), nil
+	return c.applyFloat(1, func(vals []float64) (float64, error) {
+		return math.Tanh(vals[0]), nil
 	})
 }
 
 // Asin returns the arcsine of x.
 func (c *Clac) Asin() error {
-	return c.applyFloat(1, func(x []float64) (float64, error) {
-		return math.Asin(x[0]), nil
+	return c.applyFloat(1, func(vals []float64) (float64, error) {
+		return math.Asin(vals[0]), nil
 	})
 }
 
 // Acos returns the arccosine of x.
 func (c *Clac) Acos() error {
-	return c.applyFloat(1, func(x []float64) (float64, error) {
-		return math.Acos(x[0]), nil
+	return c.applyFloat(1, func(vals []float64) (float64, error) {
+		return math.Acos(vals[0]), nil
 	})
 }
 
 // Atan returns the arctangent of x.
 func (c *Clac) Atan() error {
-	return c.applyFloat(1, func(x []float64) (float64, error) {
-		return math.Atan(x[0]), nil
+	return c.applyFloat(1, func(vals []float64) (float64, error) {
+		return math.Atan(vals[0]), nil
 	})
 }
 
 // Asinh returns the hyperbolic arcsine of x.
 func (c *Clac) Asinh() error {
-	return c.applyFloat(1, func(x []float64) (float64, error) {
-		return math.Asinh(x[0]), nil
+	return c.applyFloat(1, func(vals []float64) (float64, error) {
+		return math.Asinh(vals[0]), nil
 	})
 }
 
 // Acosh returns the hyperbolic arccosine of x.
 func (c *Clac) Acosh() error {
-	return c.applyFloat(1, func(x []float64) (float64, error) {
-		return math.Acosh(x[0]), nil
+	return c.applyFloat(1, func(vals []float64) (float64, error) {
+		return math.Acosh(vals[0]), nil
 	})
 }
 
 // Atanh returns the hyperbolic arctangent of x.
 func (c *Clac) Atanh() error {
-	return c.applyFloat(1, func(x []float64) (float64, error) {
-		return math.Atanh(x[0]), nil
+	return c.applyFloat(1, func(vals []float64) (float64, error) {
+		return math.Atanh(vals[0]), nil
 	})
 }
 
 // Atan2 returns the arctangent of y / x
 func (c *Clac) Atan2() error {
-	return c.applyFloat(2, func(x []float64) (float64, error) {
-		return math.Atan2(x[1], x[0]), nil
+	return c.applyFloat(2, func(vals []float64) (float64, error) {
+		return math.Atan2(vals[1], vals[0]), nil
 	})
 }
 
 // DegToRad converts a value in degrees to radians.
 func (c *Clac) DegToRad() error {
-	return c.applyFloat(1, func(x []float64) (float64, error) {
-		return x[0] * math.Pi / 180, nil
+	return c.applyFloat(1, func(vals []float64) (float64, error) {
+		return vals[0] * math.Pi / 180, nil
 	})
 }
 
 // RadToDeg converts a value in radians to degrees.
 func (c *Clac) RadToDeg() error {
-	return c.applyFloat(1, func(x []float64) (float64, error) {
-		return x[0] * 180 / math.Pi, nil
+	return c.applyFloat(1, func(vals []float64) (float64, error) {
+		return vals[0] * 180 / math.Pi, nil
 	})
 }
 
 // Floor returns largest integer not greater than x.
 func (c *Clac) Floor() error {
-	return c.applyFloat(1, func(x []float64) (float64, error) {
-		return math.Floor(x[0]), nil
+	return c.applyFloat(1, func(vals []float64) (float64, error) {
+		return math.Floor(vals[0]), nil
 	})
 }
 
 // Ceil returns smallest integer not less than x.
 func (c *Clac) Ceil() error {
-	return c.applyFloat(1, func(x []float64) (float64, error) {
-		return math.Ceil(x[0]), nil
+	return c.applyFloat(1, func(vals []float64) (float64, error) {
+		return math.Ceil(vals[0]), nil
 	})
 }
 
 // Trunc returns x truncated to the nearest integer toward 0.
 func (c *Clac) Trunc() error {
-	return c.applyFloat(1, func(x []float64) (float64, error) {
-		return math.Trunc(x[0]), nil
+	return c.applyFloat(1, func(vals []float64) (float64, error) {
+		return math.Trunc(vals[0]), nil
 	})
 }
 
 // And returns the bitwise and of the integer portions of y and x.
 func (c *Clac) And() error {
-	return c.applyInt(2, func(x []int64) (int64, error) {
-		return x[1] & x[0], nil
+	return c.applyInt(2, func(vals []int64) (int64, error) {
+		return vals[1] & vals[0], nil
 	})
 }
 
 // Or returns the bitwise or of the integer portions of y and x.
 func (c *Clac) Or() error {
-	return c.applyInt(2, func(x []int64) (int64, error) {
-		return x[1] | x[0], nil
+	return c.applyInt(2, func(vals []int64) (int64, error) {
+		return vals[1] | vals[0], nil
 	})
 }
 
 // Xor returns the bitwise exclusive or of the integer portions of y and x.
 func (c *Clac) Xor() error {
-	return c.applyInt(2, func(x []int64) (int64, error) {
-		return x[1] ^ x[0], nil
+	return c.applyInt(2, func(vals []int64) (int64, error) {
+		return vals[1] ^ vals[0], nil
 	})
 }
 
 // Not returns the bitwise not of the integer portion x.
 func (c *Clac) Not() error {
-	return c.applyInt(1, func(x []int64) (int64, error) {
-		return ^x[0], nil
+	return c.applyInt(1, func(vals []int64) (int64, error) {
+		return ^vals[0], nil
 	})
+}
+
+func (c *Clac) applyFloatN(f FloatFunc) error {
+	num, err := c.pop()
+	if err != nil {
+		return err
+	}
+	if num < 1 {
+		return outOfRangeErr
+	}
+	return c.applyFloat(int(num), f)
 }
 
 func sum(vals []float64) float64 {
 	sum := 0.0
-	for _, x := range vals {
-		sum += x
+	for _, v := range vals {
+		sum += v
 	}
 	return sum
 }
 
 // Sum returns the sum of the last x values on the stack
 func (c *Clac) Sum() error {
-	num, err := c.pop()
-	if err != nil {
-		return err
-	}
-	if num < 1 {
-		return outOfRangeErr
-	}
-	return c.applyFloat(int(num), func(x []float64) (float64, error) {
-		return sum(x), nil
+	return c.applyFloatN(func(vals []float64) (float64, error) {
+		return sum(vals), nil
 	})
 }
 
 // Avg returns the mean of the last x values on the stack
 func (c *Clac) Avg() error {
-	num, err := c.pop()
-	if err != nil {
-		return err
+	return c.applyFloatN(func(vals []float64) (float64, error) {
+		return sum(vals) / float64(len(vals)), nil
+	})
+}
+
+func (c *Clac) min(vals []float64) float64 {
+	min := math.MaxFloat64
+	for _, v := range vals {
+		min = math.Min(min, v)
 	}
-	if num < 1 {
-		return outOfRangeErr
+	return min
+}
+
+func (c *Clac) max(vals []float64) float64 {
+	max := -math.MaxFloat64
+	for _, v := range vals {
+		max = math.Max(max, v)
 	}
-	return c.applyFloat(int(num), func(x []float64) (float64, error) {
-		return sum(x) / math.Floor(num), nil
+	return max
+}
+
+// Min returns the minimum of x and y
+func (c *Clac) Min() error {
+	return c.applyFloat(2, func(vals []float64) (float64, error) {
+		return c.min(vals), nil
+	})
+}
+
+// Max returns the maximum of x and y
+func (c *Clac) Max() error {
+	return c.applyFloat(2, func(vals []float64) (float64, error) {
+		return c.max(vals), nil
+	})
+}
+
+// Minn returns the minimum of the last x values on the stack.
+func (c *Clac) Minn() error {
+	return c.applyFloatN(func(vals []float64) (float64, error) {
+		return c.min(vals), nil
+	})
+}
+
+// Maxn returns the maximum of the last x values on the stack.
+func (c *Clac) Maxn() error {
+	return c.applyFloatN(func(vals []float64) (float64, error) {
+		return c.max(vals), nil
 	})
 }
