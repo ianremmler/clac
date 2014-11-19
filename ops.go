@@ -2,8 +2,12 @@ package clac
 
 import "math"
 
-// x is the last value on the stack.
-// y is the penultimate value on the stack.
+const (
+	variadic = -1
+)
+
+// x is the last stack value.
+// y is the penultimate stack value.
 
 // Clear clears the stack.
 func (c *Clac) Clear() error {
@@ -15,16 +19,16 @@ func (c *Clac) Clear() error {
 }
 
 // Push pushes a value on the stack.
-func (c *Clac) Push(x float64) error {
-	return c.push(x)
+func (c *Clac) Push(a float64) error {
+	return c.push(a)
 }
 
-// Drop drops the last value from the stack.
+// Drop drops the last stack value.
 func (c *Clac) Drop() error {
 	return c.drop(0, 1)
 }
 
-// Dropn drops the last x values from the stack.
+// Dropn drops the last x stack values.
 func (c *Clac) Dropn() error {
 	num, err := c.pop()
 	if err != nil {
@@ -33,7 +37,7 @@ func (c *Clac) Dropn() error {
 	return c.drop(0, int(num))
 }
 
-// Dropr drops a range of x values from the stack, starting at index y.
+// Dropr drops a range of x stack values, starting at index y.
 func (c *Clac) Dropr() error {
 	num, err := c.pop()
 	if err != nil {
@@ -46,12 +50,12 @@ func (c *Clac) Dropr() error {
 	return c.drop(int(pos), int(num))
 }
 
-// Dup duplicates the last value on the stack.
+// Dup duplicates the last stack value.
 func (c *Clac) Dup() error {
 	return c.dup(0, 1)
 }
 
-// Dupn duplicates the last x values on the stack.
+// Dupn duplicates the last x stack values.
 func (c *Clac) Dupn() error {
 	num, err := c.pop()
 	if err != nil {
@@ -60,7 +64,7 @@ func (c *Clac) Dupn() error {
 	return c.dup(0, int(num))
 }
 
-// Dupr duplicates a range of x values on the stack, starting at index y.
+// Dupr duplicates a range of x stack values, starting at index y.
 func (c *Clac) Dupr() error {
 	num, err := c.pop()
 	if err != nil {
@@ -73,7 +77,7 @@ func (c *Clac) Dupr() error {
 	return c.dup(int(pos), int(num))
 }
 
-// Pick duplicates the value on the stack at index x.
+// Pick duplicates the stack value at index x.
 func (c *Clac) Pick() error {
 	pos, err := c.pop()
 	if err != nil {
@@ -82,12 +86,12 @@ func (c *Clac) Pick() error {
 	return c.dup(int(pos), 1)
 }
 
-// Rot rotates the value on the stack at index x down.
+// Rot rotates the stack value at index x down.
 func (c *Clac) Rot() error {
 	return c.rot(true)
 }
 
-// Unrot rotates the value on the stack at index x up.
+// Unrot rotates the stack value at index x up.
 func (c *Clac) Unrot() error {
 	return c.rot(false)
 }
@@ -100,12 +104,12 @@ func (c *Clac) rot(isDown bool) error {
 	return c.rotate(int(pos), 1, isDown)
 }
 
-// Rotr rotates a range of x values on the stack, starting at index y, down.
+// Rotr rotates a range of x stack values, starting at index y, down.
 func (c *Clac) Rotr() error {
 	return c.rotr(true)
 }
 
-// Unrotr rotates a range of x values on the stack, starting at index y, up.
+// Unrotr rotates a range of x stack values, starting at index y, up.
 func (c *Clac) Unrotr() error {
 	return c.rotr(false)
 }
@@ -122,46 +126,78 @@ func (c *Clac) rotr(isDown bool) error {
 	return c.rotate(int(pos), int(num), isDown)
 }
 
-// Swap swaps the last two values on the stack.
+// Swap swaps the last two stack values.
 func (c *Clac) Swap() error {
 	return c.rotate(1, 1, true)
 }
 
-// Depth returns the number of values on the stack
+// Depth returns the number of stack values
 func (c *Clac) Depth() error {
 	return c.push(float64(len(c.Stack())))
 }
 
-// FloatFunc represents a floating point function.
-type FloatFunc func(vals []float64) (float64, error)
+type floatFunc func(vals []float64) (float64, error)
+type binFloatFunc func(a, b float64) (float64, error)
 
-func (c *Clac) applyFloat(arity int, f FloatFunc) error {
+func (c *Clac) applyFloat(arity int, f floatFunc) error {
+	if arity < 0 {
+		num, err := c.pop()
+		if err != nil {
+			return err
+		}
+		if num < 1 {
+			return errOutOfRange
+		}
+		arity = int(num)
+	}
 	vals, err := c.remove(0, arity)
 	if err != nil {
-		return tooFewArgsErr
+		return errTooFewArgs
 	}
 	res, err := f(vals)
 	if err != nil {
 		return err
 	}
 	if math.IsNaN(res) {
-		return invalidArgErr
+		return errInvalidArg
 	}
 	return c.push(res)
 }
 
-// IntFunc represents an integer function
-type IntFunc func(vals []int64) (int64, error)
+func reduceFloat(initVal float64, vals []float64, f binFloatFunc) (float64, error) {
+	var err error
+	val := initVal
+	for _, v := range vals {
+		val, err = f(val, v)
+		if err != nil {
+			return 0, err
+		}
+	}
+	return val, nil
+}
 
-func (c *Clac) applyInt(arity int, f IntFunc) error {
+type intFunc func(vals []int64) (int64, error)
+type binIntFunc func(a, b int64) (int64, error)
+
+func (c *Clac) applyInt(arity int, f intFunc) error {
+	if arity < 0 {
+		num, err := c.pop()
+		if err != nil {
+			return err
+		}
+		if num < 1 {
+			return errOutOfRange
+		}
+		arity = int(num)
+	}
 	vals, err := c.remove(0, arity)
 	if err != nil {
-		return tooFewArgsErr
+		return errTooFewArgs
 	}
 	ivals := make([]int64, arity)
 	for i, v := range vals {
 		if math.Abs(v) > math.MaxInt64 {
-			return outOfRangeErr
+			return errOutOfRange
 		}
 		ivals[i] = int64(v)
 	}
@@ -170,6 +206,18 @@ func (c *Clac) applyInt(arity int, f IntFunc) error {
 		return err
 	}
 	return c.push(float64(res))
+}
+
+func reduceInt(initVal int64, vals []int64, f binIntFunc) (int64, error) {
+	var err error
+	val := initVal
+	for _, v := range vals {
+		val, err = f(val, v)
+		if err != nil {
+			return 0, err
+		}
+	}
+	return val, nil
 }
 
 // Neg returns the negation of x.
@@ -190,7 +238,7 @@ func (c *Clac) Abs() error {
 func (c *Clac) Inv() error {
 	return c.applyFloat(1, func(vals []float64) (float64, error) {
 		if vals[0] == 0 {
-			return 0, invalidArgErr
+			return 0, errInvalidArg
 		}
 		return 1 / vals[0], nil
 	})
@@ -221,7 +269,7 @@ func (c *Clac) Mul() error {
 func (c *Clac) Div() error {
 	return c.applyFloat(2, func(vals []float64) (float64, error) {
 		if vals[0] == 0 {
-			return 0, invalidArgErr
+			return 0, errInvalidArg
 		}
 		return vals[1] / vals[0], nil
 	})
@@ -451,79 +499,80 @@ func (c *Clac) Not() error {
 	})
 }
 
-func (c *Clac) applyFloatN(f FloatFunc) error {
-	num, err := c.pop()
-	if err != nil {
-		return err
-	}
-	if num < 1 {
-		return outOfRangeErr
-	}
-	return c.applyFloat(int(num), f)
+// Andn returns the bitwise and of the integer portions of the last x stack values.
+func (c *Clac) Andn() error {
+	return c.applyInt(variadic, func(vals []int64) (int64, error) {
+		return reduceInt(^0, vals, func(a, b int64) (int64, error) {
+			return a & b, nil
+		})
+	})
 }
 
-func sum(vals []float64) float64 {
-	sum := 0.0
-	for _, v := range vals {
-		sum += v
-	}
-	return sum
+// Orn returns the bitwise or of the integer portions of the last x stack values.
+func (c *Clac) Orn() error {
+	return c.applyInt(variadic, func(vals []int64) (int64, error) {
+		return reduceInt(0, vals, func(a, b int64) (int64, error) {
+			return a | b, nil
+		})
+	})
 }
 
-// Sum returns the sum of the last x values on the stack
+// Xorn returns the bitwise exclusive or of the integer portions of the last x stack values.
+func (c *Clac) Xorn() error {
+	return c.applyInt(variadic, func(vals []int64) (int64, error) {
+		return reduceInt(0, vals, func(a, b int64) (int64, error) {
+			return a ^ b, nil
+		})
+	})
+}
+
+// Sum returns the sum of the last x stack values
 func (c *Clac) Sum() error {
-	return c.applyFloatN(func(vals []float64) (float64, error) {
-		return sum(vals), nil
+	return c.applyFloat(variadic, func(vals []float64) (float64, error) {
+		return reduceFloat(0, vals, func(a, b float64) (float64, error) {
+			return a + b, nil
+		})
 	})
 }
 
-// Avg returns the mean of the last x values on the stack
+// Avg returns the mean of the last x stack values
 func (c *Clac) Avg() error {
-	return c.applyFloatN(func(vals []float64) (float64, error) {
-		return sum(vals) / float64(len(vals)), nil
+	return c.applyFloat(variadic, func(vals []float64) (float64, error) {
+		sum, _ := reduceFloat(0, vals, func(a, b float64) (float64, error) {
+			return a + b, nil
+		})
+		return sum / float64(len(vals)), nil
 	})
-}
-
-func (c *Clac) min(vals []float64) float64 {
-	min := math.MaxFloat64
-	for _, v := range vals {
-		min = math.Min(min, v)
-	}
-	return min
-}
-
-func (c *Clac) max(vals []float64) float64 {
-	max := -math.MaxFloat64
-	for _, v := range vals {
-		max = math.Max(max, v)
-	}
-	return max
 }
 
 // Min returns the minimum of x and y
 func (c *Clac) Min() error {
 	return c.applyFloat(2, func(vals []float64) (float64, error) {
-		return c.min(vals), nil
+		return math.Min(vals[0], vals[1]), nil
 	})
 }
 
 // Max returns the maximum of x and y
 func (c *Clac) Max() error {
 	return c.applyFloat(2, func(vals []float64) (float64, error) {
-		return c.max(vals), nil
+		return math.Max(vals[0], vals[1]), nil
 	})
 }
 
-// Minn returns the minimum of the last x values on the stack.
+// Minn returns the minimum of the last x stack values.
 func (c *Clac) Minn() error {
-	return c.applyFloatN(func(vals []float64) (float64, error) {
-		return c.min(vals), nil
+	return c.applyFloat(variadic, func(vals []float64) (float64, error) {
+		return reduceFloat(math.MaxFloat64, vals, func(a, b float64) (float64, error) {
+			return math.Min(a, b), nil
+		})
 	})
 }
 
-// Maxn returns the maximum of the last x values on the stack.
+// Maxn returns the maximum of the last x stack values.
 func (c *Clac) Maxn() error {
-	return c.applyFloatN(func(vals []float64) (float64, error) {
-		return c.max(vals), nil
+	return c.applyFloat(variadic, func(vals []float64) (float64, error) {
+		return reduceFloat(-math.MaxFloat64, vals, func(a, b float64) (float64, error) {
+			return math.Max(a, b), nil
+		})
 	})
 }

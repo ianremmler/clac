@@ -8,10 +8,10 @@ import (
 )
 
 var (
-	tooFewArgsErr    = errors.New("too few arguments")
-	invalidArgErr    = errors.New("invalid argument")
-	outOfRangeErr    = errors.New("argument out of range")
-	noMoreChangesErr = errors.New("no more changes")
+	errTooFewArgs    = errors.New("too few arguments")
+	errInvalidArg    = errors.New("invalid argument")
+	errOutOfRange    = errors.New("argument out of range")
+	errNoMoreChanges = errors.New("no more changes")
 )
 
 // ParseNum parses a string for an integer or floating point number.
@@ -21,7 +21,7 @@ func ParseNum(in string) (float64, error) {
 	}
 	num, err := strconv.ParseFloat(in, 64)
 	if math.IsNaN(num) {
-		return 0, invalidArgErr
+		return 0, errInvalidArg
 	}
 	return num, err
 }
@@ -82,7 +82,7 @@ func (c *Clac) Stack() Stack {
 // Undo undoes the last operation.
 func (c *Clac) Undo() error {
 	if !c.hist.undo() {
-		return noMoreChangesErr
+		return errNoMoreChanges
 	}
 	c.updateWorking()
 	return nil
@@ -91,12 +91,13 @@ func (c *Clac) Undo() error {
 // Redo redoes the last undone operation.
 func (c *Clac) Redo() error {
 	if !c.hist.redo() {
-		return noMoreChangesErr
+		return errNoMoreChanges
 	}
 	c.updateWorking()
 	return nil
 }
 
+// Exec executes a clac command, along with necessary bookkeeping
 func (c *Clac) Exec(f func() error) error {
 	c.beginCmd()
 	err := f()
@@ -123,11 +124,11 @@ func (c *Clac) updateWorking() {
 func (c *Clac) checkRange(pos, num int, isEndOK bool) (int, int, error) {
 	max := len(c.working)
 	if isEndOK {
-		max += 1
+		max++
 	}
 	start, end := pos, pos+num-1
 	if start < 0 || start > end || start >= max || end >= max {
-		return 0, 0, outOfRangeErr
+		return 0, 0, errOutOfRange
 	}
 	return start, end, nil
 }
@@ -158,7 +159,7 @@ func (c *Clac) remove(pos, num int) ([]float64, error) {
 func (c *Clac) pop() (float64, error) {
 	x, err := c.remove(0, 1)
 	if err != nil {
-		return 0, tooFewArgsErr
+		return 0, errTooFewArgs
 	}
 	return x[0], err
 }
