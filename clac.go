@@ -12,6 +12,7 @@ var (
 	errInvalidArg    = errors.New("invalid argument")
 	errOutOfRange    = errors.New("argument out of range")
 	errNoMoreChanges = errors.New("no more changes")
+	errNoHistUpdate  = errors.New("") // for cmds that don't add to history
 )
 
 // ParseNum parses a string for an integer or floating point number.
@@ -79,41 +80,20 @@ func (c *Clac) Stack() Stack {
 	return c.working
 }
 
-// Undo undoes the last operation.
-func (c *Clac) Undo() error {
-	if !c.hist.undo() {
-		return errNoMoreChanges
-	}
-	c.updateWorking()
-	return nil
-}
-
-// Redo redoes the last undone operation.
-func (c *Clac) Redo() error {
-	if !c.hist.redo() {
-		return errNoMoreChanges
-	}
-	c.updateWorking()
-	return nil
-}
-
 // Exec executes a clac command, along with necessary bookkeeping
 func (c *Clac) Exec(f func() error) error {
-	c.beginCmd()
-	err := f()
-	c.endCmd(err)
-	return err
-}
-
-func (c *Clac) beginCmd() {
 	c.updateWorking()
-}
-
-func (c *Clac) endCmd(err error) {
-	if err == nil {
+	err := f()
+	switch err {
+	case nil:
 		c.hist.push(c.working)
-	} else {
+		return nil
+	case errNoHistUpdate:
 		c.updateWorking()
+		return nil
+	default:
+		c.updateWorking()
+		return err
 	}
 }
 

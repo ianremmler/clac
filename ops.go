@@ -7,14 +7,31 @@ const (
 )
 
 // x is the last stack value.
+
+// Undo undoes the last operation.
+func (c *Clac) Undo() error {
+	if !c.hist.undo() {
+		return errNoMoreChanges
+	}
+	return errNoHistUpdate
+}
+
+// Redo redoes the last undone operation.
+func (c *Clac) Redo() error {
+	if !c.hist.redo() {
+		return errNoMoreChanges
+	}
+	return errNoHistUpdate
+}
+
 // y is the penultimate stack value.
 
 // Clear clears the stack.
 func (c *Clac) Clear() error {
-	if len(c.hist.stack()) > 0 {
-		c.hist.push(Stack{})
-		c.updateWorking()
+	if len(c.working) == 0 {
+		return errNoHistUpdate
 	}
+	c.working = Stack{}
 	return nil
 }
 
