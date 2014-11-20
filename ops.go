@@ -622,7 +622,11 @@ func (c *Clac) Factorial() error {
 		if vals[0] < 0 {
 			return 0, errInvalidArg
 		}
-		return int64(math.Gamma(float64(vals[0]+1)) + 0.5), nil
+		n := int64(math.Gamma(float64(vals[0]+1)) + 0.5)
+		if n < 0 {
+			return 0, errInvalidArg
+		}
+		return n, nil
 	})
 }
 
