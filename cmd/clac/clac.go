@@ -41,6 +41,7 @@ var (
 		"lg":     cl.Lg,
 		"sqrt":   cl.Sqrt,
 		"hypot":  cl.Hypot,
+		"gamma":  cl.Gamma,
 		"!":      cl.Factorial,
 		"comb":   cl.Comb,
 		"perm":   cl.Perm,

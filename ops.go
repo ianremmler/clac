@@ -609,54 +609,52 @@ func (c *Clac) Maxn() error {
 	})
 }
 
-func factorial(n int64) (int64, error) {
-	if n < 0 {
-		return 0, errInvalidArg
-	}
-	x := int64(1)
-	for i := n; i > 1; i-- {
-		x *= i
-	}
-	return x, nil
+// Gamma returns the gamma function of x
+func (c *Clac) Gamma() error {
+	return c.applyFloat(1, func(vals []float64) (float64, error) {
+		return math.Gamma(vals[0]), nil
+	})
 }
 
 // Factorial returns the factorial of x
 func (c *Clac) Factorial() error {
 	return c.applyInt(1, func(vals []int64) (int64, error) {
-		return factorial(vals[0])
+		if vals[0] < 0 {
+			return 0, errInvalidArg
+		}
+		return int64(math.Gamma(float64(vals[0]+1)) + 0.5), nil
 	})
 }
 
 // Comb returns the number of combinations of x taken from y
 func (c *Clac) Comb() error {
 	return c.applyInt(2, func(vals []int64) (int64, error) {
-		nf, err := factorial(vals[1])
-		if err != nil {
-			return 0, err
+		if vals[0] < 0 || vals[1] < 0 || vals[1] < vals[0] {
+			return 0, errInvalidArg
 		}
-		rf, err := factorial(vals[0])
-		if err != nil {
-			return 0, err
+		nf := math.Gamma(float64(vals[1] + 1))
+		rf := math.Gamma(float64(vals[0] + 1))
+		nrf := math.Gamma(float64(vals[1] - vals[0] + 1))
+		n := int64(nf/(nrf*rf) + 0.5)
+		if n < 0 {
+			return 0, errInvalidArg
 		}
-		nrf, err := factorial(vals[1] - vals[0])
-		if err != nil {
-			return 0, err
-		}
-		return nf / (nrf * rf), nil
+		return n, nil
 	})
 }
 
 // Perm returns the number of permutations of x taken from y
 func (c *Clac) Perm() error {
 	return c.applyInt(2, func(vals []int64) (int64, error) {
-		nf, err := factorial(vals[1])
-		if err != nil {
-			return 0, err
+		if vals[0] < 0 || vals[1] < 0 || vals[1] < vals[0] {
+			return 0, errInvalidArg
 		}
-		nrf, err := factorial(vals[1] - vals[0])
-		if err != nil {
-			return 0, err
+		nf := math.Gamma(float64(vals[1] + 1))
+		nrf := math.Gamma(float64(vals[1] - vals[0] + 1))
+		n := int64(nf/nrf + 0.5)
+		if n < 0 {
+			return 0, errInvalidArg
 		}
-		return nf / nrf, nil
+		return n, nil
 	})
 }
