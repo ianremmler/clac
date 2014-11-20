@@ -450,6 +450,38 @@ func (c *Clac) RadToDeg() error {
 	})
 }
 
+// RectToPolar converts 2D rectangular coordinates y,x to polar coordinates.
+func (c *Clac) RectToPolar() error {
+	y, err := c.pop()
+	if err != nil {
+		return err
+	}
+	x, err := c.pop()
+	if err != nil {
+		return err
+	}
+	if c.push(math.Hypot(x, y)) != nil {
+		return err
+	}
+	return c.push(math.Atan2(y, x))
+}
+
+// PolarToRect converts 2D polar coordinates y<x to rectangular coordinates.
+func (c *Clac) PolarToRect() error {
+	theta, err := c.pop()
+	if err != nil {
+		return err
+	}
+	r, err := c.pop()
+	if err != nil {
+		return err
+	}
+	if c.push(r*math.Cos(theta)) != nil {
+		return err
+	}
+	return c.push(r * math.Sin(theta))
+}
+
 // Floor returns largest integer not greater than x.
 func (c *Clac) Floor() error {
 	return c.applyFloat(1, func(vals []float64) (float64, error) {
@@ -574,5 +606,57 @@ func (c *Clac) Maxn() error {
 		return reduceFloat(-math.MaxFloat64, vals, func(a, b float64) (float64, error) {
 			return math.Max(a, b), nil
 		})
+	})
+}
+
+func factorial(n int64) (int64, error) {
+	if n < 0 {
+		return 0, errInvalidArg
+	}
+	x := int64(1)
+	for i := n; i > 1; i-- {
+		x *= i
+	}
+	return x, nil
+}
+
+// Factorial returns the factorial of x
+func (c *Clac) Factorial() error {
+	return c.applyInt(1, func(vals []int64) (int64, error) {
+		return factorial(vals[0])
+	})
+}
+
+// Comb returns the number of combinations of x taken from y
+func (c *Clac) Comb() error {
+	return c.applyInt(2, func(vals []int64) (int64, error) {
+		nf, err := factorial(vals[1])
+		if err != nil {
+			return 0, err
+		}
+		rf, err := factorial(vals[0])
+		if err != nil {
+			return 0, err
+		}
+		nrf, err := factorial(vals[1] - vals[0])
+		if err != nil {
+			return 0, err
+		}
+		return nf / (nrf * rf), nil
+	})
+}
+
+// Perm returns the number of permutations of x taken from y
+func (c *Clac) Perm() error {
+	return c.applyInt(2, func(vals []int64) (int64, error) {
+		nf, err := factorial(vals[1])
+		if err != nil {
+			return 0, err
+		}
+		nrf, err := factorial(vals[1] - vals[0])
+		if err != nil {
+			return 0, err
+		}
+		return nf / nrf, nil
 	})
 }
