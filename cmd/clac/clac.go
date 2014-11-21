@@ -145,7 +145,7 @@ func main() {
 
 	for {
 		printStack(cl.Stack())
-		input, err := lnr.Prompt("> ")
+		input, err := lnr.Prompt(" ")
 		lastErr = nil
 		if err == io.EOF {
 			exit()
