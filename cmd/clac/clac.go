@@ -22,6 +22,7 @@ var (
 	trm     *term.Terminal
 	lnr     *liner.State
 	cl      = clac.New()
+	lastErr error
 	cmdList = []string{}
 	cmdMap  = map[string]func() error{
 		"neg":    cl.Neg,
@@ -145,6 +146,7 @@ func main() {
 	for {
 		printStack(cl.Stack())
 		input, err := lnr.Prompt("> ")
+		lastErr = nil
 		if err == io.EOF {
 			exit()
 		}
@@ -154,8 +156,7 @@ func main() {
 		if strings.TrimSpace(input) != "" {
 			lnr.AppendHistory(input)
 		}
-		parseInput(input, func(err error) { log.Println(err); waitKey() })
-		fmt.Println()
+		parseInput(input, func(err error) { lastErr = err })
 	}
 }
 
@@ -257,7 +258,11 @@ func printStack(stack clac.Stack) {
 		}
 		fmt.Println()
 	}
-	fmt.Println(strings.Repeat("-", 40))
+	if lastErr == nil {
+		fmt.Println(strings.Repeat("-", 40))
+	} else {
+		fmt.Println("Error:", lastErr)
+	}
 }
 
 func clearScreen() {
