@@ -7,6 +7,7 @@ const (
 )
 
 // x is the last stack value.
+// y is the penultimate stack value.
 
 // Undo undoes the last operation.
 func (c *Clac) Undo() error {
