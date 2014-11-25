@@ -84,17 +84,14 @@ func (c *Clac) Stack() Stack {
 func (c *Clac) Exec(f func() error) error {
 	c.updateWorking()
 	err := f()
-	switch err {
-	case nil:
+	if err == nil {
 		c.hist.push(c.working)
-		return nil
-	case errNoHistUpdate:
-		c.updateWorking()
-		return nil
-	default:
-		c.updateWorking()
-		return err
 	}
+	c.updateWorking()
+	if err == errNoHistUpdate {
+		return nil
+	}
+	return err
 }
 
 func (c *Clac) updateWorking() {
