@@ -72,7 +72,15 @@ type Clac struct {
 
 // New returns an initialized Clac instance.
 func New() *Clac {
-	return &Clac{working: Stack{}, hist: newStackHist()}
+	c := &Clac{}
+	c.Reset()
+	return c
+}
+
+// Reset resets clac to its initial state
+func (c *Clac) Reset() {
+	c.working = Stack{}
+	c.hist = newStackHist()
 }
 
 // Stack returns the current stack.
