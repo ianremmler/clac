@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"errors"
+	"flag"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -12,19 +13,29 @@ import (
 	"os/signal"
 	"sort"
 	"strings"
+	"syscall"
 
 	"github.com/ianremmler/clac"
-	"github.com/kless/term"
-	"github.com/peterh/liner"
+	"golang.org/x/crypto/ssh/terminal"
 )
 
+const usageStr = `usage:
+
+Interactive:  clac [-i <input>]
+Command line: [... |] clac [-x] [<input>]
+
+Command line mode requires input from arguments (without -i) and/or stdin.
+`
+
 var (
-	trm     *term.Terminal
-	lnr     *liner.State
-	cl      = clac.New()
-	lastErr error
-	cmdList = []string{}
-	cmdMap  = map[string]func() error{
+	trm         *terminal.Terminal
+	oldTrmState *terminal.State
+	lastErr     error
+	cl          = clac.New()
+	doHexOut    = false
+	doInitStack = false
+	cmdList     = []string{}
+	cmdMap      = map[string]func() error{
 		"neg":    cl.Neg,
 		"abs":    cl.Abs,
 		"inv":    cl.Inv,
@@ -103,39 +114,43 @@ var (
 	}
 )
 
+type term struct {
+	io.Reader
+	io.Writer
+}
+
 func init() {
 	log.SetFlags(0)
-	log.SetPrefix("Error: ")
+	log.SetPrefix("clac: ")
 	for cmd := range cmdMap {
 		cmdList = append(cmdList, cmd)
 	}
 	sort.Strings(cmdList)
+	flag.BoolVar(&doHexOut, "x", doHexOut,
+		"In command line mode, output stack in hexidecimal format")
+	flag.BoolVar(&doInitStack, "i", doInitStack,
+		"Initialize with input from command line arguments")
+	flag.Usage = func() {
+		fmt.Fprintln(os.Stderr, usageStr)
+		flag.PrintDefaults()
+	}
 }
 
 func main() {
+	flag.Parse()
 	if processCmdLine() {
-		stack := cl.Stack()
-		for i := range stack {
-			fmt.Print(stack[len(stack)-i-1])
-			if i < len(stack)-1 {
-				fmt.Print(" ")
-			}
-		}
-		fmt.Println()
+		printCmdLineStack(cl.Stack())
 		os.Exit(0)
 	}
-
-	if !term.SupportANSI() {
-		log.Fatalln("terminal does not support ANSI codes.")
+	if !terminal.IsTerminal(syscall.Stdin) {
+		log.Fatalln("this doesn't look like an interactive terminal")
 	}
 	var err error
-	trm, err = term.New()
+	oldTrmState, err = terminal.MakeRaw(syscall.Stdin)
 	if err != nil {
 		log.Fatalln(err)
 	}
-	lnr = liner.NewLiner()
-	lnr.SetWordCompleter(complete)
-
+	trm = terminal.NewTerminal(term{os.Stdin, os.Stdout}, "")
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt)
 	go func() {
@@ -143,9 +158,14 @@ func main() {
 		exit()
 	}()
 
+	repl()
+}
+
+func repl() {
 	for {
 		printStack(cl.Stack())
-		input, err := lnr.Prompt(" ")
+		// 		input, err := lnr.Prompt(" ")
+		input, err := trm.ReadLine()
 		lastErr = nil
 		if err == io.EOF {
 			exit()
@@ -154,7 +174,7 @@ func main() {
 			continue
 		}
 		if strings.TrimSpace(input) != "" {
-			lnr.AppendHistory(input)
+			// 			lnr.AppendHistory(input)
 		}
 		parseInput(input, func(err error) { lastErr = err })
 	}
@@ -167,19 +187,34 @@ func processCmdLine() bool {
 			input = string(pipeInput)
 		}
 	}
-	if len(os.Args) > 1 {
-		input += " " + strings.Join(os.Args[1:], " ")
+	if len(flag.Args()) > 0 {
+		input += " " + strings.Join(flag.Args(), " ")
 	}
 	if input != "" {
 		parseInput(string(input), func(err error) { log.Println(err) })
-		return true
+		return !doInitStack
 	}
 	return false
 }
 
+func printCmdLineStack(stack clac.Stack) {
+	for i := range stack {
+		if doHexOut {
+			fmt.Printf("%#x", int64(stack[len(stack)-i-1]))
+		} else {
+			fmt.Print(stack[len(stack)-i-1])
+		}
+		if i < len(stack)-1 {
+			fmt.Print(" ")
+		}
+	}
+	fmt.Println()
+}
+
 func exit() {
 	fmt.Println()
-	lnr.Close()
+	// 	lnr.Close()
+	terminal.Restore(syscall.Stdin, oldTrmState)
 	os.Exit(0)
 }
 
@@ -225,24 +260,8 @@ func parseInput(input string, errorHandler func(err error)) {
 	}
 }
 
-func complete(in string, pos int) (string, []string, string) {
-	start := strings.LastIndexAny(in[:pos], " \t") + 1
-	end := len(in)
-	if idx := strings.IndexAny(in[pos:], " \t"); idx >= 0 {
-		end = pos + idx
-	}
-	head, word, tail := in[:start], in[start:end], in[end:]
-	cmds := []string{}
-	for i := range cmdList {
-		if strings.HasPrefix(cmdList[i], word) {
-			cmds = append(cmds, cmdList[i])
-		}
-	}
-	return head, cmds, tail
-}
-
 func printStack(stack clac.Stack) {
-	numRows, _, err := trm.GetSize()
+	numRows, _, err := terminal.GetSize(syscall.Stdout)
 	if err != nil {
 		numRows = len(stack) + 1
 	}
