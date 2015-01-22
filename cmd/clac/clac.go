@@ -261,7 +261,7 @@ func parseInput(input string, errorHandler func(err error)) {
 }
 
 func printStack(stack clac.Stack) {
-	numRows, _, err := terminal.GetSize(syscall.Stdout)
+	_, numRows, err := terminal.GetSize(syscall.Stdout)
 	if err != nil {
 		numRows = len(stack) + 1
 	}

@@ -1,7 +1,7 @@
 clac
 ====
 
-Clac is a pracital RPN calculator for the terminal and shell.
+Clac is a practical RPN calculator for the terminal and shell.
 
 Features include:
 - Command line completion and history
