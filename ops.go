@@ -722,3 +722,13 @@ func (c *Clac) Cross() error {
 	}
 	return c.insert(cross, 0)
 }
+
+// Mag returns the magnitude of the vector represented by the last x stack values
+func (c *Clac) Mag() error {
+	return c.applyFloat(variadic, func(vals []float64) (float64, error) {
+		magSq, _ := reduceFloat(0, vals, func(a, b float64) (float64, error) {
+			return a + b*b, nil
+		})
+		return math.Sqrt(magSq), nil
+	})
+}

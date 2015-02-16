@@ -89,6 +89,7 @@ var (
 		"dot":    cl.Dot,
 		"dot3":   cl.Dot3,
 		"cross":  cl.Cross,
+		"mag":    cl.Mag,
 		"clear":  cl.Clear,
 		"drop":   cl.Drop,
 		"dropn":  cl.DropN,
