@@ -112,8 +112,11 @@ func (c *Clac) checkRange(pos, num int, isEndOK bool) (int, int, error) {
 		max++
 	}
 	start, end := pos, pos+num-1
-	if start < 0 || start > end || start >= max || end >= max {
-		return 0, 0, errOutOfRange
+	if start < 0 || start > end {
+		return 0, 0, errInvalidArg
+	}
+	if start >= max || end >= max {
+		return 0, 0, errTooFewArgs
 	}
 	return start, end, nil
 }
