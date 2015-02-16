@@ -47,25 +47,25 @@ func (c *Clac) Drop() error {
 }
 
 // Dropn drops the last x stack values.
-func (c *Clac) Dropn() error {
-	num, err := c.pop()
+func (c *Clac) DropN() error {
+	num, err := c.popCount()
 	if err != nil {
 		return err
 	}
-	return c.drop(0, int(num))
+	return c.drop(0, num)
 }
 
 // Dropr drops a range of x stack values, starting at index y.
-func (c *Clac) Dropr() error {
-	num, err := c.pop()
+func (c *Clac) DropR() error {
+	num, err := c.popCount()
 	if err != nil {
 		return err
 	}
-	pos, err := c.pop()
+	pos, err := c.popIndex()
 	if err != nil {
 		return err
 	}
-	return c.drop(int(pos), int(num))
+	return c.drop(pos, num)
 }
 
 // Dup duplicates the last stack value.
@@ -73,35 +73,35 @@ func (c *Clac) Dup() error {
 	return c.dup(0, 1)
 }
 
-// Dupn duplicates the last x stack values.
-func (c *Clac) Dupn() error {
-	num, err := c.pop()
+// DupN duplicates the last x stack values.
+func (c *Clac) DupN() error {
+	num, err := c.popCount()
 	if err != nil {
 		return err
 	}
-	return c.dup(0, int(num))
+	return c.dup(0, num)
 }
 
-// Dupr duplicates a range of x stack values, starting at index y.
-func (c *Clac) Dupr() error {
-	num, err := c.pop()
+// DupR duplicates a range of x stack values, starting at index y.
+func (c *Clac) DupR() error {
+	num, err := c.popCount()
 	if err != nil {
 		return err
 	}
-	pos, err := c.pop()
+	pos, err := c.popIndex()
 	if err != nil {
 		return err
 	}
-	return c.dup(int(pos), int(num))
+	return c.dup(pos, num)
 }
 
 // Pick duplicates the stack value at index x.
 func (c *Clac) Pick() error {
-	pos, err := c.pop()
+	pos, err := c.popIndex()
 	if err != nil {
 		return err
 	}
-	return c.dup(int(pos), 1)
+	return c.dup(pos, 1)
 }
 
 // Rot rotates the stack value at index x down.
@@ -115,33 +115,33 @@ func (c *Clac) Unrot() error {
 }
 
 func (c *Clac) rot(isDown bool) error {
-	pos, err := c.pop()
+	pos, err := c.popIndex()
 	if err != nil {
 		return err
 	}
-	return c.rotate(int(pos), 1, isDown)
+	return c.rotate(pos, 1, isDown)
 }
 
 // Rotr rotates a range of x stack values, starting at index y, down.
-func (c *Clac) Rotr() error {
-	return c.rotr(true)
+func (c *Clac) RotR() error {
+	return c.rotR(true)
 }
 
 // Unrotr rotates a range of x stack values, starting at index y, up.
-func (c *Clac) Unrotr() error {
-	return c.rotr(false)
+func (c *Clac) UnrotR() error {
+	return c.rotR(false)
 }
 
-func (c *Clac) rotr(isDown bool) error {
-	num, err := c.pop()
+func (c *Clac) rotR(isDown bool) error {
+	num, err := c.popCount()
 	if err != nil {
 		return err
 	}
-	pos, err := c.pop()
+	pos, err := c.popIndex()
 	if err != nil {
 		return err
 	}
-	return c.rotate(int(pos), int(num), isDown)
+	return c.rotate(pos, num, isDown)
 }
 
 // Swap swaps the last two stack values.
@@ -159,14 +159,14 @@ type binFloatFunc func(a, b float64) (float64, error)
 
 func (c *Clac) applyFloat(arity int, f floatFunc) error {
 	if arity < 0 {
-		num, err := c.pop()
+		num, err := c.popCount()
 		if err != nil {
 			return err
 		}
 		if num < 1 {
 			return errOutOfRange
 		}
-		arity = int(num)
+		arity = num
 	}
 	vals, err := c.remove(0, arity)
 	if err != nil {
@@ -199,14 +199,14 @@ type binIntFunc func(a, b int64) (int64, error)
 
 func (c *Clac) applyInt(arity int, f intFunc) error {
 	if arity < 0 {
-		num, err := c.pop()
+		num, err := c.popCount()
 		if err != nil {
 			return err
 		}
 		if num < 1 {
 			return errOutOfRange
 		}
-		arity = int(num)
+		arity = num
 	}
 	vals, err := c.remove(0, arity)
 	if err != nil {
@@ -550,7 +550,7 @@ func (c *Clac) Not() error {
 }
 
 // Andn returns the bitwise and of the integer portions of the last x stack values.
-func (c *Clac) Andn() error {
+func (c *Clac) AndN() error {
 	return c.applyInt(variadic, func(vals []int64) (int64, error) {
 		return reduceInt(^0, vals, func(a, b int64) (int64, error) {
 			return a & b, nil
@@ -559,7 +559,7 @@ func (c *Clac) Andn() error {
 }
 
 // Orn returns the bitwise or of the integer portions of the last x stack values.
-func (c *Clac) Orn() error {
+func (c *Clac) OrN() error {
 	return c.applyInt(variadic, func(vals []int64) (int64, error) {
 		return reduceInt(0, vals, func(a, b int64) (int64, error) {
 			return a | b, nil
@@ -568,7 +568,7 @@ func (c *Clac) Orn() error {
 }
 
 // Xorn returns the bitwise exclusive or of the integer portions of the last x stack values.
-func (c *Clac) Xorn() error {
+func (c *Clac) XorN() error {
 	return c.applyInt(variadic, func(vals []int64) (int64, error) {
 		return reduceInt(0, vals, func(a, b int64) (int64, error) {
 			return a ^ b, nil
@@ -610,7 +610,7 @@ func (c *Clac) Max() error {
 }
 
 // Minn returns the minimum of the last x stack values.
-func (c *Clac) Minn() error {
+func (c *Clac) MinN() error {
 	return c.applyFloat(variadic, func(vals []float64) (float64, error) {
 		return reduceFloat(math.MaxFloat64, vals, func(a, b float64) (float64, error) {
 			return math.Min(a, b), nil
@@ -619,7 +619,7 @@ func (c *Clac) Minn() error {
 }
 
 // Maxn returns the maximum of the last x stack values.
-func (c *Clac) Maxn() error {
+func (c *Clac) MaxN() error {
 	return c.applyFloat(variadic, func(vals []float64) (float64, error) {
 		return reduceFloat(-math.MaxFloat64, vals, func(a, b float64) (float64, error) {
 			return math.Max(a, b), nil
@@ -679,4 +679,52 @@ func (c *Clac) Perm() error {
 		}
 		return n, nil
 	})
+}
+
+// Dot returns the dot product of two vectors of size x
+// The vectors are composed of the 2*x items on the stack above x
+func (c *Clac) Dot() error {
+	num, err := c.popCount()
+	if err != nil {
+		return err
+	}
+	return c.dot(num)
+}
+
+// Dot3 returns the dot product of two 3D vectors
+// The vectors are composed of the last 6 items on the stack
+func (c *Clac) Dot3() error {
+	return c.dot(3)
+}
+
+func (c *Clac) dot(num int) error {
+	if num < 1 {
+		return errInvalidArg
+	}
+	vals, err := c.remove(0, 2*num)
+	if err != nil {
+		return err
+	}
+	a, b := vals[:num], vals[num:]
+	dot := 0.0
+	for i := range a {
+		dot += a[i] * b[i]
+	}
+	return c.push(dot)
+}
+
+// Cross returns the cross product of two 3D vectors
+// The vectors are composed of the last 6 items on the stack
+func (c *Clac) Cross() error {
+	vals, err := c.remove(0, 6)
+	if err != nil {
+		return err
+	}
+	a, b := vals[:3], vals[3:]
+	cross := []float64{
+		a[1]*b[2] - a[2]*b[1],
+		a[2]*b[0] - a[0]*b[2],
+		a[0]*b[1] - a[1]*b[0],
+	}
+	return c.insert(cross, 0)
 }

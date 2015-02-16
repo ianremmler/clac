@@ -149,6 +149,26 @@ func (c *Clac) pop() (float64, error) {
 	return x[0], err
 }
 
+func (c *Clac) popIntMin(min int) (int, error) {
+	x, err := c.pop()
+	if err != nil {
+		return 0, err
+	}
+	n := int(x)
+	if n < min {
+		return 0, errInvalidArg
+	}
+	return n, err
+}
+
+func (c *Clac) popIndex() (int, error) {
+	return c.popIntMin(0)
+}
+
+func (c *Clac) popCount() (int, error) {
+	return c.popIntMin(1)
+}
+
 func (c *Clac) vals(pos, num int) (Stack, error) {
 	start, end, err := c.checkRange(pos, num, false)
 	if err != nil {
