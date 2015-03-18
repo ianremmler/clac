@@ -208,7 +208,7 @@ func (c *Clac) applyInt(arity int, f intFunc) error {
 	}
 	ivals := make([]int64, arity)
 	for i, v := range vals {
-		if math.Abs(v) > math.MaxInt64 {
+		if math.Abs(v) > 1<<53 {
 			return errOutOfRange
 		}
 		ivals[i] = int64(v)
