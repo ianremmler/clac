@@ -3,8 +3,9 @@ package clac
 
 import (
 	"errors"
-	"math"
-	"strconv"
+	"math/big"
+
+	"robpike.io/ivy/value"
 )
 
 var (
@@ -13,22 +14,18 @@ var (
 	errOutOfRange    = errors.New("argument out of range")
 	errNoMoreChanges = errors.New("no more changes")
 	errNoHistUpdate  = errors.New("") // for cmds that don't add to history
+
+	zero = value.Int(0)
 )
 
-// ParseNum parses a string for an integer or floating point number.
-func ParseNum(in string) (float64, error) {
-	if i, err := strconv.ParseInt(in, 0, 64); err == nil {
-		return float64(i), nil
-	}
-	num, err := strconv.ParseFloat(in, 64)
-	if math.IsNaN(num) {
-		return 0, errInvalidArg
-	}
-	return num, err
+// IsNum returns whether the string represents a number
+func IsNum(in string) bool {
+	_, ok := big.NewFloat(0).SetString(in)
+	return ok
 }
 
 // Stack represents a stack of floating point numbers.
-type Stack []float64
+type Stack []value.Value
 
 type stackHist struct {
 	cur  int
@@ -121,7 +118,7 @@ func (c *Clac) checkRange(pos, num int, isEndOK bool) (int, int, error) {
 	return start, end, nil
 }
 
-func (c *Clac) insert(vals []float64, pos int) error {
+func (c *Clac) insert(vals []value.Value, pos int) error {
 	idx, _, err := c.checkRange(pos, 1, true)
 	if err != nil {
 		return err
@@ -130,24 +127,24 @@ func (c *Clac) insert(vals []float64, pos int) error {
 	return nil
 }
 
-func (c *Clac) push(x float64) error {
-	return c.insert([]float64{x}, 0)
+func (c *Clac) push(x value.Value) error {
+	return c.insert([]value.Value{x}, 0)
 }
 
-func (c *Clac) remove(pos, num int) ([]float64, error) {
+func (c *Clac) remove(pos, num int) ([]value.Value, error) {
 	start, end, err := c.checkRange(pos, num, false)
 	if err != nil {
 		return nil, err
 	}
-	vals := append([]float64{}, c.working[start:end+1]...)
+	vals := append([]value.Value{}, c.working[start:end+1]...)
 	c.working = append(c.working[:start], c.working[end+1:]...)
 	return vals, nil
 }
 
-func (c *Clac) pop() (float64, error) {
+func (c *Clac) pop() (value.Value, error) {
 	x, err := c.remove(0, 1)
 	if err != nil {
-		return 0, errTooFewArgs
+		return zero, errTooFewArgs
 	}
 	return x[0], err
 }
@@ -157,7 +154,11 @@ func (c *Clac) popIntMin(min int) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	n := int(x)
+	xi, ok := x.(value.Int)
+	if !ok {
+		return 0, errInvalidArg
+	}
+	n := int(xi)
 	if n < min {
 		return 0, errInvalidArg
 	}
@@ -203,4 +204,26 @@ func (c *Clac) rotate(pos, num int, isDown bool) error {
 		return err
 	}
 	return c.insert(vals, to)
+}
+
+func Unary(op string, a value.Value) (val value.Value, err error) {
+	defer func() { err = errVal(recover()) }()
+	val = value.Unary(op, a)
+	return val, err
+}
+
+func Binary(a value.Value, op string, b value.Value) (val value.Value, err error) {
+	defer func() { err = errVal(recover()) }()
+	val = value.Binary(a, op, b)
+	return val, err
+}
+
+func errVal(val interface{}) error {
+	if val == nil {
+		return nil
+	}
+	if err, ok := val.(error); ok {
+		return err
+	}
+	return errors.New("unknown error")
 }
