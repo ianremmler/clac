@@ -2,7 +2,6 @@ package main
 
 import (
 	"bufio"
-	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -16,7 +15,6 @@ import (
 
 	"github.com/ianremmler/clac"
 	"golang.org/x/crypto/ssh/terminal"
-	"robpike.io/ivy/config"
 	"robpike.io/ivy/value"
 )
 
@@ -29,7 +27,6 @@ Command line mode requires input from arguments (without -i) and/or stdin.
 `
 
 var (
-	cfg         = &config.Config{}
 	trm         *terminal.Terminal
 	oldTrmState *terminal.State
 	lastErr     error
@@ -38,54 +35,46 @@ var (
 	doInitStack = false
 	cmdList     = []string{}
 	cmdMap      = map[string]func() error{
-		"neg":  cl.Neg,
-		"abs":  cl.Abs,
-		"inv":  cl.Inv,
-		"+":    cl.Add,
-		"-":    cl.Sub,
-		"*":    cl.Mul,
-		"/":    cl.Div,
-		"div":  cl.IntDiv,
-		"mod":  cl.Mod,
-		"exp":  cl.Exp,
-		"^":    cl.Pow,
-		"2^":   cl.Pow2,
-		"10^":  cl.Pow10,
-		"ln":   cl.Ln,
-		"log":  cl.Log,
-		"lg":   cl.Lg,
-		"sqrt": cl.Sqrt,
-		// 		"gamma":  cl.Gamma,
-		"!":    cl.Factorial,
-		"comb": cl.Comb,
-		"perm": cl.Perm,
-		"sin":  cl.Sin,
-		"cos":  cl.Cos,
-		"tan":  cl.Tan,
-		"asin": cl.Asin,
-		"acos": cl.Acos,
-		"atan": cl.Atan,
-		// 		"atan2":  cl.Atan2,
-		"dtor": cl.DegToRad,
-		"rtod": cl.RadToDeg,
-		// 		"rtop":  cl.RectToPolar,
-		// 		"ptor":  cl.PolarToRect,
-		"floor": cl.Floor,
-		"ceil":  cl.Ceil,
-		// 		"trunc":  cl.Trunc,
-		"and":  cl.And,
-		"or":   cl.Or,
-		"xor":  cl.Xor,
-		"not":  cl.Not,
-		"andn": cl.AndN,
-		"orn":  cl.OrN,
-		"xorn": cl.XorN,
-		"sum":  cl.Sum,
-		"avg":  cl.Avg,
-		// 		"dot":    cl.Dot,
-		// 		"dot3":   cl.Dot3,
-		// 		"cross":  cl.Cross,
-		// 		"mag":    cl.Mag,
+		"neg":    cl.Neg,
+		"abs":    cl.Abs,
+		"inv":    cl.Inv,
+		"+":      cl.Add,
+		"-":      cl.Sub,
+		"*":      cl.Mul,
+		"/":      cl.Div,
+		"div":    cl.IntDiv,
+		"mod":    cl.Mod,
+		"exp":    cl.Exp,
+		"^":      cl.Pow,
+		"2^":     cl.Pow2,
+		"10^":    cl.Pow10,
+		"ln":     cl.Ln,
+		"log":    cl.Log,
+		"lg":     cl.Lg,
+		"sqrt":   cl.Sqrt,
+		"!":      cl.Factorial,
+		"comb":   cl.Comb,
+		"perm":   cl.Perm,
+		"sin":    cl.Sin,
+		"cos":    cl.Cos,
+		"tan":    cl.Tan,
+		"asin":   cl.Asin,
+		"acos":   cl.Acos,
+		"atan":   cl.Atan,
+		"atan2":  cl.Atan2,
+		"dtor":   cl.DegToRad,
+		"rtod":   cl.RadToDeg,
+		"floor":  cl.Floor,
+		"ceil":   cl.Ceil,
+		"and":    cl.And,
+		"or":     cl.Or,
+		"xor":    cl.Xor,
+		"not":    cl.Not,
+		"andn":   cl.AndN,
+		"orn":    cl.OrN,
+		"xorn":   cl.XorN,
+		"sum":    cl.Sum,
+		"avg":    cl.Avg,
 		"clear":  cl.Clear,
 		"drop":   cl.Drop,
 		"dropn":  cl.DropN,
@@ -106,17 +95,19 @@ var (
 		"rotr":   cl.RotR,
 		"unrot":  cl.Unrot,
 		"unrotr": cl.UnrotR,
-		"pi": func() error {
-			_, pi := value.Consts()
-			return cl.Push(pi)
-		},
-		"e": func() error {
-			e, _ := value.Consts()
-			return cl.Push(e)
-		},
-		// 		"phi":    func() error { return cl.Push(math.Phi) },
-		"quit": func() error { exit(); return nil },
-		"help": func() error { help(); return nil },
+		"pi":     func() error { return cl.Push(clac.Pi) },
+		"e":      func() error { return cl.Push(clac.E) },
+		"quit":   func() error { exit(); return nil },
+		"help":   func() error { help(); return nil },
+		// "gamma": cl.Gamma,
+		// "rtop":  cl.RectToPolar,
+		// "ptor":  cl.PolarToRect,
+		// "trunc": cl.Trunc,
+		// "dot":   cl.Dot,
+		// "dot3":  cl.Dot3,
+		// "cross": cl.Cross,
+		// "mag":   cl.Mag,
+		// "phi":   func() error { return cl.Push(math.Phi) },
 	}
 )
 
@@ -140,7 +131,6 @@ func init() {
 		fmt.Fprintln(os.Stderr, usageStr)
 		flag.PrintDefaults()
 	}
-	value.SetConfig(cfg)
 }
 
 func main() {
@@ -257,17 +247,17 @@ func parseInput(input string, errorHandler func(err error)) {
 				continue
 			}
 			if err = cl.Exec(func() error { return cl.Push(num) }); err != nil {
-				errorHandler(errors.New("push: " + err.Error()))
+				errorHandler(fmt.Errorf("push: %s", err))
 			}
 			continue
 		}
 		if cmd, ok := cmdMap[tok]; ok {
 			if err := cl.Exec(cmd); err != nil {
-				errorHandler(errors.New(tok + ": " + err.Error()))
+				errorHandler(fmt.Errorf("%s: %s", tok, err))
 			}
 			continue
 		}
-		errorHandler(errors.New(tok + ": invalid input"))
+		errorHandler(fmt.Errorf("%s: invalid input", tok))
 	}
 }
 
@@ -279,20 +269,23 @@ func printStack(stack clac.Stack) {
 	clearScreen()
 
 	for i := numRows - 3; i >= 0; i-- {
-		fmt.Printf("%2d:", i)
+		line := fmt.Sprintf("%02d:", i)
 		if i < len(stack) {
-			cfg.SetFormat("%#16.10g")
-			fmt.Printf(" %s", stack[i])
-
+			clac.SetFormat("%30.23g")
+			line += fmt.Sprintf(" %30s", stack[i])
 			if val, err := clac.Unary("floor", stack[i]); err == nil {
-				cfg.SetFormat(" %#19x")
-				fmt.Print(val)
+				clac.SetFormat("%#27x")
+				hexStr := fmt.Sprintf(" %29s", val)
+				if len(hexStr) > 30 {
+					hexStr = hexStr[:29] + "…"
+				}
+				line += hexStr
 			}
 		}
-		fmt.Println()
+		fmt.Println(line)
 	}
 	if lastErr == nil {
-		fmt.Println(strings.Repeat("-", 40))
+		fmt.Println(strings.Repeat("-", 64))
 	} else {
 		fmt.Println("Error:", lastErr)
 	}

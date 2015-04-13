@@ -5,18 +5,31 @@ import (
 	"errors"
 	"math/big"
 
+	"robpike.io/ivy/config"
 	"robpike.io/ivy/value"
 )
 
 var (
+	Pi, E value.BigFloat
+
 	errTooFewArgs    = errors.New("too few arguments")
 	errInvalidArg    = errors.New("invalid argument")
 	errOutOfRange    = errors.New("argument out of range")
 	errNoMoreChanges = errors.New("no more changes")
 	errNoHistUpdate  = errors.New("") // for cmds that don't add to history
 
-	zero = value.Int(0)
+	zero   = value.Int(0)
+	ivyCfg = &config.Config{}
 )
+
+func init() {
+	value.SetConfig(ivyCfg)
+	E, Pi = value.Consts()
+}
+
+func SetFormat(format string) {
+	ivyCfg.SetFormat(format)
+}
 
 // IsNum returns whether the string represents a number
 func IsNum(in string) bool {

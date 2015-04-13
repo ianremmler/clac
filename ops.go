@@ -1,6 +1,10 @@
 package clac
 
-import "robpike.io/ivy/value"
+import (
+	"fmt"
+
+	"robpike.io/ivy/value"
+)
 
 const (
 	variadic = -1
@@ -308,9 +312,8 @@ func (c *Clac) Sqrt() error {
 
 // Exp returns e to the power of x.
 func (c *Clac) Exp() error {
-	e, _ := value.Consts()
 	return c.applyFloat(1, func(vals []value.Value) (value.Value, error) {
-		return Binary(e, "**", vals[0])
+		return Binary(E, "**", vals[0])
 	})
 }
 
@@ -402,18 +405,32 @@ func (c *Clac) Atan() error {
 	})
 }
 
-// // Atan2 returns the arctangent of y / x
-// func (c *Clac) Atan2() error {
-// 	return c.applyFloat(2, func(vals []float64) (float64, error) {
-// 		return math.Atan2(vals[1], vals[0]), nil
-// 	})
-// }
+// Atan2 returns the arctangent of y / x
+func (c *Clac) Atan2() error {
+	return c.applyFloat(2, func(vals []value.Value) (value.Value, error) {
+		e := &eval{}
+		tan := e.e(func() (value.Value, error) { return Binary(vals[0], "/", vals[1]) })
+		angle := e.e(func() (value.Value, error) { return Unary("atan", tan) })
+		ltz := e.e(func() (value.Value, error) { return Binary(vals[1], "<", zero) })
+		if True(ltz) {
+			ltez := e.e(func() (value.Value, error) { return Binary(tan, "<=", zero) })
+			if True(ltez) {
+				angle = e.e(func() (value.Value, error) { return Binary(angle, "+", Pi) })
+			} else {
+				angle = e.e(func() (value.Value, error) { return Binary(angle, "-", Pi) })
+			}
+		}
+		if e.err != nil {
+			return zero, e.err
+		}
+		return angle, nil
+	})
+}
 
 // DegToRad converts a value in degrees to radians.
 func (c *Clac) DegToRad() error {
 	return c.applyFloat(1, func(vals []value.Value) (value.Value, error) {
-		_, pi := value.Consts()
-		conv, _ := Binary(pi, "/", value.Int(180))
+		conv, _ := Binary(Pi, "/", value.Int(180))
 		return Binary(vals[0], "*", conv)
 	})
 }
@@ -421,8 +438,7 @@ func (c *Clac) DegToRad() error {
 // RadToDeg converts a value in radians to degrees.
 func (c *Clac) RadToDeg() error {
 	return c.applyFloat(1, func(vals []value.Value) (value.Value, error) {
-		_, pi := value.Consts()
-		conv, _ := Binary(value.Int(180), "/", pi)
+		conv, _ := Binary(value.Int(180), "/", Pi)
 		return Binary(vals[0], "*", conv)
 	})
 }
@@ -717,3 +733,14 @@ func (c *Clac) Perm() error {
 // 		return math.Sqrt(magSq), nil
 // 	})
 // }
+
+func True(val value.Value) bool {
+	ival, ok := val.(value.Int)
+	fmt.Println("ival:", ival)
+	if !ok {
+		return true
+	}
+	fmt.Printf("%T\n", ival)
+	// 	return int64(ival) != 0
+	return true
+}
