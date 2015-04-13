@@ -21,7 +21,7 @@ import (
 const usageStr = `usage:
 
 Interactive:  clac [-i <input>]
-Command line: [... |] clac [-x] [<input>]
+Command line: ... | clac [-x] [<input>]
 
 Command line mode requires input from arguments (without -i) and/or stdin.
 `
@@ -196,11 +196,12 @@ func processCmdLine() bool {
 
 func printCmdLineStack(stack clac.Stack) {
 	for i := range stack {
-		// 		if doHexOut {
-		// 			fmt.Printf("%#x", int64(stack[len(stack)-i-1]))
-		// 		} else {
+		if doHexOut {
+			clac.SetFormat("%#x")
+		} else {
+			clac.SetFormat("%g")
+		}
 		fmt.Print(stack[len(stack)-i-1])
-		// 		}
 		if i < len(stack)-1 {
 			fmt.Print(" ")
 		}
