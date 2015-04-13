@@ -27,12 +27,15 @@ Command line mode requires input from arguments (without -i) and/or stdin.
 `
 
 var (
+	// flags
+	doInitStack      = false
+	doHexOut         = false
+	cliPrec     uint = 5
+
 	trm         *terminal.Terminal
 	oldTrmState *terminal.State
 	lastErr     error
 	cl          = clac.New()
-	doHexOut    = false
-	doInitStack = false
 	cmdList     = []string{}
 	cmdMap      = map[string]func() error{
 		"neg":    cl.Neg,
@@ -99,15 +102,6 @@ var (
 		"e":      func() error { return cl.Push(clac.E) },
 		"quit":   func() error { exit(); return nil },
 		"help":   func() error { help(); return nil },
-		// "gamma": cl.Gamma,
-		// "rtop":  cl.RectToPolar,
-		// "ptor":  cl.PolarToRect,
-		// "trunc": cl.Trunc,
-		// "dot":   cl.Dot,
-		// "dot3":  cl.Dot3,
-		// "cross": cl.Cross,
-		// "mag":   cl.Mag,
-		// "phi":   func() error { return cl.Push(math.Phi) },
 	}
 )
 
@@ -124,7 +118,9 @@ func init() {
 	}
 	sort.Strings(cmdList)
 	flag.BoolVar(&doHexOut, "x", doHexOut,
-		"In command line mode, output stack in hexidecimal format")
+		"Command line mode: hexidecimal output")
+	flag.UintVar(&cliPrec, "p", cliPrec,
+		"Command line mode: output precision")
 	flag.BoolVar(&doInitStack, "i", doInitStack,
 		"Initialize with input from command line arguments")
 	flag.Usage = func() {
@@ -161,7 +157,6 @@ func main() {
 func repl() {
 	for {
 		printStack(cl.Stack())
-		// 		input, err := lnr.Prompt(" ")
 		input, err := trm.ReadLine()
 		lastErr = nil
 		if err == io.EOF {
@@ -169,9 +164,6 @@ func repl() {
 		}
 		if err != nil {
 			continue
-		}
-		if strings.TrimSpace(input) != "" {
-			// 			lnr.AppendHistory(input)
 		}
 		parseInput(input, func(err error) { lastErr = err })
 	}
@@ -195,13 +187,21 @@ func processCmdLine() bool {
 }
 
 func printCmdLineStack(stack clac.Stack) {
+	if doHexOut {
+		clac.SetFormat("%#x")
+	} else {
+		clac.SetFormat(fmt.Sprintf("%%.%dg", cliPrec))
+	}
 	for i := range stack {
+		val := stack[len(stack)-i-1]
 		if doHexOut {
-			clac.SetFormat("%#x")
-		} else {
-			clac.SetFormat("%g")
+			var err error
+			if val, err = clac.Unary("floor", val); err != nil {
+				fmt.Print("error")
+				continue
+			}
 		}
-		fmt.Print(stack[len(stack)-i-1])
+		fmt.Print(val)
 		if i < len(stack)-1 {
 			fmt.Print(" ")
 		}
@@ -211,7 +211,6 @@ func printCmdLineStack(stack clac.Stack) {
 
 func exit() {
 	fmt.Println()
-	// 	lnr.Close()
 	terminal.Restore(syscall.Stdin, oldTrmState)
 	os.Exit(0)
 }
