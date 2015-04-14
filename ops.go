@@ -1,10 +1,6 @@
 package clac
 
-import (
-	"fmt"
-
-	"robpike.io/ivy/value"
-)
+import "robpike.io/ivy/value"
 
 const (
 	variadic = -1
@@ -209,7 +205,7 @@ func (c *Clac) applyInt(arity int, f intFunc) error {
 	}
 	ivals := make([]value.Value, arity)
 	for i, v := range vals {
-		ivals[i], err = Unary("floor", v)
+		ivals[i], err = IntVal(v)
 		if err != nil {
 			return err
 		}
@@ -236,172 +232,169 @@ func reduceInt(initVal value.Value, vals []value.Value, f binIntFunc) (value.Val
 // Neg returns the negation of x.
 func (c *Clac) Neg() error {
 	return c.applyFloat(1, func(vals []value.Value) (value.Value, error) {
-		return Unary("-", vals[0])
+		return unary("-", vals[0])
 	})
 }
 
 // Abs returns the absolute value of x.
 func (c *Clac) Abs() error {
 	return c.applyFloat(1, func(vals []value.Value) (value.Value, error) {
-		return Unary("abs", vals[0])
+		return unary("abs", vals[0])
 	})
 }
 
 // Inv returns the inverse of x.
 func (c *Clac) Inv() error {
 	return c.applyFloat(1, func(vals []value.Value) (value.Value, error) {
-		return Unary("/", vals[0])
+		return unary("/", vals[0])
 	})
 }
 
 // Add returns the sum of y and x.
 func (c *Clac) Add() error {
 	return c.applyFloat(2, func(vals []value.Value) (value.Value, error) {
-		return Binary(vals[1], "+", vals[0])
+		return binary(vals[1], "+", vals[0])
 	})
 }
 
 // Sub returns the difference of y and x.
 func (c *Clac) Sub() error {
 	return c.applyFloat(2, func(vals []value.Value) (value.Value, error) {
-		return Binary(vals[1], "-", vals[0])
+		return binary(vals[1], "-", vals[0])
 	})
 }
 
 // Mul returns the product of y and x.
 func (c *Clac) Mul() error {
 	return c.applyFloat(2, func(vals []value.Value) (value.Value, error) {
-		return Binary(vals[1], "*", vals[0])
+		return binary(vals[1], "*", vals[0])
 	})
 }
 
 // Div returns the quotient of y divided by x.
 func (c *Clac) Div() error {
 	return c.applyFloat(2, func(vals []value.Value) (value.Value, error) {
-		return Binary(vals[1], "/", vals[0])
+		return binary(vals[1], "/", vals[0])
 	})
 }
 
 // IntDiv returns the quotient of y divided by x.
 func (c *Clac) IntDiv() error {
 	return c.applyInt(2, func(vals []value.Value) (value.Value, error) {
-		return Binary(vals[1], "div", vals[0])
+		return binary(vals[1], "div", vals[0])
 	})
 }
 
 // Mod returns the remainder of y divided by x.
 func (c *Clac) Mod() error {
 	return c.applyFloat(2, func(vals []value.Value) (value.Value, error) {
-		return Binary(vals[1], "mod", vals[0])
+		return binary(vals[1], "mod", vals[0])
 	})
 }
 
 // Pow returns y to the x power.
 func (c *Clac) Pow() error {
 	return c.applyFloat(2, func(vals []value.Value) (value.Value, error) {
-		return Binary(vals[1], "**", vals[0])
+		return binary(vals[1], "**", vals[0])
 	})
 }
 
 // Sqrt returns the square root of x.
 func (c *Clac) Sqrt() error {
 	return c.applyFloat(1, func(vals []value.Value) (value.Value, error) {
-		return Unary("sqrt", vals[0])
+		return unary("sqrt", vals[0])
 	})
 }
 
 // Exp returns e to the power of x.
 func (c *Clac) Exp() error {
 	return c.applyFloat(1, func(vals []value.Value) (value.Value, error) {
-		return Binary(E, "**", vals[0])
+		return binary(E, "**", vals[0])
 	})
 }
 
 // Pow2 returns 2 to the power of x.
 func (c *Clac) Pow2() error {
 	return c.applyFloat(1, func(vals []value.Value) (value.Value, error) {
-		two, _ := value.Parse("2")
-		return Binary(two, "**", vals[0])
+		return binary(value.Int(2), "**", vals[0])
 	})
 }
 
 // Pow10 returns 10 to the power of x.
 func (c *Clac) Pow10() error {
 	return c.applyFloat(1, func(vals []value.Value) (value.Value, error) {
-		return Binary(value.Int(10), "**", vals[0])
+		return binary(value.Int(10), "**", vals[0])
 	})
 }
 
 // Ln returns the natural log of x.
 func (c *Clac) Ln() error {
 	return c.applyFloat(1, func(vals []value.Value) (value.Value, error) {
-		return Unary("log", vals[0])
+		return unary("log", vals[0])
 	})
 }
 
 // Lg returns the base 2 logarithm of x.
 func (c *Clac) Lg() error {
 	return c.applyFloat(1, func(vals []value.Value) (value.Value, error) {
-		ln, err := Unary("log", vals[0])
-		if err != nil {
-			return zero, err
-		}
-		ln2, _ := Unary("log", value.Int(2))
-		return Binary(ln, "/", ln2)
+		e := eval{}
+		lnx := e.unary("log", vals[0])
+		ln2 := e.unary("log", value.Int(2))
+		lg := e.binary(lnx, "/", ln2)
+		return lg, e.err
 	})
 }
 
 // Log returns the base 10 logarithm of x.
 func (c *Clac) Log() error {
 	return c.applyFloat(1, func(vals []value.Value) (value.Value, error) {
-		ln, err := Unary("log", vals[0])
-		if err != nil {
-			return zero, err
-		}
-		ln10, _ := Unary("log", value.Int(10))
-		return Binary(ln, "/", ln10)
+		e := &eval{}
+		lnx := e.unary("log", vals[0])
+		ln10 := e.unary("log", value.Int(10))
+		log := e.binary(lnx, "/", ln10)
+		return log, e.err
 	})
 }
 
 // Sin returns the sine of x.
 func (c *Clac) Sin() error {
 	return c.applyFloat(1, func(vals []value.Value) (value.Value, error) {
-		return Unary("sin", vals[0])
+		return unary("sin", vals[0])
 	})
 }
 
 // Cos returns the cosine of x.
 func (c *Clac) Cos() error {
 	return c.applyFloat(1, func(vals []value.Value) (value.Value, error) {
-		return Unary("cos", vals[0])
+		return unary("cos", vals[0])
 	})
 }
 
 // Tan returns the tangent of x.
 func (c *Clac) Tan() error {
 	return c.applyFloat(1, func(vals []value.Value) (value.Value, error) {
-		return Unary("tan", vals[0])
+		return unary("tan", vals[0])
 	})
 }
 
 // Asin returns the arcsine of x.
 func (c *Clac) Asin() error {
 	return c.applyFloat(1, func(vals []value.Value) (value.Value, error) {
-		return Unary("asin", vals[0])
+		return unary("asin", vals[0])
 	})
 }
 
 // Acos returns the arccosine of x.
 func (c *Clac) Acos() error {
 	return c.applyFloat(1, func(vals []value.Value) (value.Value, error) {
-		return Unary("acos", vals[0])
+		return unary("acos", vals[0])
 	})
 }
 
 // Atan returns the arctangent of x.
 func (c *Clac) Atan() error {
 	return c.applyFloat(1, func(vals []value.Value) (value.Value, error) {
-		return Unary("atan", vals[0])
+		return unary("atan", vals[0])
 	})
 }
 
@@ -409,37 +402,53 @@ func (c *Clac) Atan() error {
 func (c *Clac) Atan2() error {
 	return c.applyFloat(2, func(vals []value.Value) (value.Value, error) {
 		e := &eval{}
-		tan := e.e(func() (value.Value, error) { return Binary(vals[0], "/", vals[1]) })
-		angle := e.e(func() (value.Value, error) { return Unary("atan", tan) })
-		ltz := e.e(func() (value.Value, error) { return Binary(vals[1], "<", zero) })
-		if True(ltz) {
-			ltez := e.e(func() (value.Value, error) { return Binary(tan, "<=", zero) })
-			if True(ltez) {
-				angle = e.e(func() (value.Value, error) { return Binary(angle, "+", Pi) })
+		x, y := vals[1], vals[0]
+
+		// special cases
+		tan := value.Value(zero)
+		if isTrue(e.binary(y, "==", zero)) {
+			if isTrue(e.binary(x, "<", zero)) {
+				tan = Pi
+			}
+			return tan, e.err
+		}
+		if isTrue(e.binary(x, "==", zero)) {
+			ySgn := e.unary("sgn", y)
+			tan = e.binary(Pi, "/", value.Int(2))
+			tan = e.binary(tan, "*", ySgn)
+			return tan, e.err
+		}
+
+		tan = e.binary(y, "/", x)
+		angle := e.unary("atan", tan)
+		if isTrue(e.binary(x, "<", zero)) {
+			if isTrue(e.binary(tan, "<=", zero)) {
+				angle = e.binary(angle, "+", Pi)
 			} else {
-				angle = e.e(func() (value.Value, error) { return Binary(angle, "-", Pi) })
+				angle = e.binary(angle, "-", Pi)
 			}
 		}
-		if e.err != nil {
-			return zero, e.err
-		}
-		return angle, nil
+		return angle, e.err
 	})
 }
 
 // DegToRad converts a value in degrees to radians.
 func (c *Clac) DegToRad() error {
 	return c.applyFloat(1, func(vals []value.Value) (value.Value, error) {
-		conv, _ := Binary(Pi, "/", value.Int(180))
-		return Binary(vals[0], "*", conv)
+		e := &eval{}
+		radPerDeg := e.binary(Pi, "/", value.Int(180))
+		rad := e.binary(vals[0], "*", radPerDeg)
+		return rad, e.err
 	})
 }
 
 // RadToDeg converts a value in radians to degrees.
 func (c *Clac) RadToDeg() error {
 	return c.applyFloat(1, func(vals []value.Value) (value.Value, error) {
-		conv, _ := Binary(value.Int(180), "/", Pi)
-		return Binary(vals[0], "*", conv)
+		e := &eval{}
+		degPerRad := e.binary(value.Int(180), "/", Pi)
+		deg := e.binary(vals[0], "*", degPerRad)
+		return deg, e.err
 	})
 }
 
@@ -478,14 +487,14 @@ func (c *Clac) RadToDeg() error {
 // Floor returns largest integer not greater than x.
 func (c *Clac) Floor() error {
 	return c.applyFloat(1, func(vals []value.Value) (value.Value, error) {
-		return Unary("floor", vals[0])
+		return unary("floor", vals[0])
 	})
 }
 
 // Ceil returns smallest integer not less than x.
 func (c *Clac) Ceil() error {
 	return c.applyFloat(1, func(vals []value.Value) (value.Value, error) {
-		return Unary("ceil", vals[0])
+		return unary("ceil", vals[0])
 	})
 }
 
@@ -499,28 +508,28 @@ func (c *Clac) Ceil() error {
 // And returns the bitwise and of the integer portions of y and x.
 func (c *Clac) And() error {
 	return c.applyInt(2, func(vals []value.Value) (value.Value, error) {
-		return Binary(vals[1], "&", vals[0])
+		return binary(vals[1], "&", vals[0])
 	})
 }
 
 // Or returns the bitwise or of the integer portions of y and x.
 func (c *Clac) Or() error {
 	return c.applyInt(2, func(vals []value.Value) (value.Value, error) {
-		return Binary(vals[1], "|", vals[0])
+		return binary(vals[1], "|", vals[0])
 	})
 }
 
 // Xor returns the bitwise exclusive or of the integer portions of y and x.
 func (c *Clac) Xor() error {
 	return c.applyInt(2, func(vals []value.Value) (value.Value, error) {
-		return Binary(vals[1], "^", vals[0])
+		return binary(vals[1], "^", vals[0])
 	})
 }
 
 // Not returns the bitwise not of the integer portion x.
 func (c *Clac) Not() error {
 	return c.applyInt(1, func(vals []value.Value) (value.Value, error) {
-		return Unary("not", vals[0])
+		return unary("^", vals[0])
 	})
 }
 
@@ -528,7 +537,7 @@ func (c *Clac) Not() error {
 func (c *Clac) AndN() error {
 	return c.applyInt(variadic, func(vals []value.Value) (value.Value, error) {
 		return reduceInt(value.Int(-1), vals, func(a, b value.Value) (value.Value, error) {
-			return Binary(a, "&", b)
+			return binary(a, "&", b)
 		})
 	})
 }
@@ -537,7 +546,7 @@ func (c *Clac) AndN() error {
 func (c *Clac) OrN() error {
 	return c.applyInt(variadic, func(vals []value.Value) (value.Value, error) {
 		return reduceInt(zero, vals, func(a, b value.Value) (value.Value, error) {
-			return Binary(a, "|", b)
+			return binary(a, "|", b)
 		})
 	})
 }
@@ -546,7 +555,7 @@ func (c *Clac) OrN() error {
 func (c *Clac) XorN() error {
 	return c.applyInt(variadic, func(vals []value.Value) (value.Value, error) {
 		return reduceInt(zero, vals, func(a, b value.Value) (value.Value, error) {
-			return Binary(a, "^", b)
+			return binary(a, "^", b)
 		})
 	})
 }
@@ -555,7 +564,7 @@ func (c *Clac) XorN() error {
 func (c *Clac) Sum() error {
 	return c.applyFloat(variadic, func(vals []value.Value) (value.Value, error) {
 		return reduceFloat(zero, vals, func(a, b value.Value) (value.Value, error) {
-			return Binary(a, "+", b)
+			return binary(a, "+", b)
 		})
 	})
 }
@@ -564,23 +573,23 @@ func (c *Clac) Sum() error {
 func (c *Clac) Avg() error {
 	return c.applyFloat(variadic, func(vals []value.Value) (value.Value, error) {
 		sum, _ := reduceFloat(zero, vals, func(a, b value.Value) (value.Value, error) {
-			return Binary(a, "+", b)
+			return binary(a, "+", b)
 		})
-		return Binary(sum, "/", value.Int(len(vals)))
+		return binary(sum, "/", value.Int(len(vals)))
 	})
 }
 
 // Min returns the minimum of x and y
 func (c *Clac) Min() error {
 	return c.applyFloat(2, func(vals []value.Value) (value.Value, error) {
-		return Binary(vals[1], "min", vals[0])
+		return binary(vals[1], "min", vals[0])
 	})
 }
 
 // Max returns the maximum of x and y
 func (c *Clac) Max() error {
 	return c.applyFloat(2, func(vals []value.Value) (value.Value, error) {
-		return Binary(vals[1], "max", vals[0])
+		return binary(vals[1], "max", vals[0])
 	})
 }
 
@@ -588,7 +597,7 @@ func (c *Clac) Max() error {
 func (c *Clac) MinN() error {
 	return c.applyFloat(variadic, func(vals []value.Value) (value.Value, error) {
 		return reduceFloat(vals[0], vals, func(a, b value.Value) (value.Value, error) {
-			return Binary(a, "min", b)
+			return binary(a, "min", b)
 		})
 	})
 }
@@ -597,7 +606,7 @@ func (c *Clac) MinN() error {
 func (c *Clac) MaxN() error {
 	return c.applyFloat(variadic, func(vals []value.Value) (value.Value, error) {
 		return reduceFloat(vals[0], vals, func(a, b value.Value) (value.Value, error) {
-			return Binary(a, "max", b)
+			return binary(a, "max", b)
 		})
 	})
 }
@@ -610,44 +619,24 @@ func (c *Clac) MaxN() error {
 // }
 
 func factorial(val value.Value) (value.Value, error) {
+	e := eval{}
 	ival, ok := val.(value.Int)
 	if !ok {
 		return zero, errInvalidArg
 	}
 	n := int(ival)
 	var fact value.Value = value.Int(1)
-	var err error
 	for i := 2; i <= n; i++ {
-		fact, err = Binary(fact, "*", value.Int(i))
-		if err != nil {
-			return zero, err
-		}
+		fact = e.binary(fact, "*", value.Int(i))
 	}
-	return fact, nil
+	return fact, e.err
 }
 
 // Factorial returns the factorial of x
 func (c *Clac) Factorial() error {
 	return c.applyInt(1, func(vals []value.Value) (value.Value, error) {
-		fact, err := factorial(vals[0])
-		if err != nil {
-			return zero, err
-		}
-		return fact, nil
+		return factorial(vals[0])
 	})
-}
-
-type eval struct {
-	err error
-}
-
-func (e *eval) e(f func() (value.Value, error)) value.Value {
-	if e.err != nil {
-		return zero
-	}
-	val, err := f()
-	e.err = err
-	return val
 }
 
 // Comb returns the number of combinations of x taken from y
@@ -656,10 +645,10 @@ func (c *Clac) Comb() error {
 		e := &eval{}
 		nf := e.e(func() (value.Value, error) { return factorial(vals[1]) })
 		rf := e.e(func() (value.Value, error) { return factorial(vals[0]) })
-		nr := e.e(func() (value.Value, error) { return Binary(vals[1], "-", vals[0]) })
+		nr := e.binary(vals[1], "-", vals[0])
 		nrf := e.e(func() (value.Value, error) { return factorial(nr) })
-		denom := e.e(func() (value.Value, error) { return Binary(nrf, "*", rf) })
-		n := e.e(func() (value.Value, error) { return Binary(nf, "/", denom) })
+		denom := e.binary(nrf, "*", rf)
+		n := e.binary(nf, "/", denom)
 		return n, e.err
 	})
 }
@@ -669,78 +658,85 @@ func (c *Clac) Perm() error {
 	return c.applyInt(2, func(vals []value.Value) (value.Value, error) {
 		e := &eval{}
 		nf := e.e(func() (value.Value, error) { return factorial(vals[1]) })
-		nr := e.e(func() (value.Value, error) { return Binary(vals[1], "-", vals[0]) })
+		nr := e.binary(vals[1], "-", vals[0])
 		nrf := e.e(func() (value.Value, error) { return factorial(nr) })
-		n := e.e(func() (value.Value, error) { return Binary(nf, "/", nrf) })
+		n := e.binary(nf, "/", nrf)
 		return n, e.err
 	})
 }
 
-// // Dot returns the dot product of two vectors of size x
-// // The vectors are composed of the 2*x items on the stack above x
-// func (c *Clac) Dot() error {
-// 	num, err := c.popCount()
-// 	if err != nil {
-// 		return err
-// 	}
-// 	return c.dot(num)
-// }
-//
-// // Dot3 returns the dot product of two 3D vectors
-// // The vectors are composed of the last 6 items on the stack
-// func (c *Clac) Dot3() error {
-// 	return c.dot(3)
-// }
-//
-// func (c *Clac) dot(num int) error {
-// 	if num < 1 {
-// 		return errInvalidArg
-// 	}
-// 	vals, err := c.remove(0, 2*num)
-// 	if err != nil {
-// 		return err
-// 	}
-// 	a, b := vals[:num], vals[num:]
-// 	dot := 0.0
-// 	for i := range a {
-// 		dot += a[i] * b[i]
-// 	}
-// 	return c.push(dot)
-// }
-//
-// // Cross returns the cross product of two 3D vectors
-// // The vectors are composed of the last 6 items on the stack
-// func (c *Clac) Cross() error {
-// 	vals, err := c.remove(0, 6)
-// 	if err != nil {
-// 		return err
-// 	}
-// 	a, b := vals[:3], vals[3:]
-// 	cross := []float64{
-// 		a[1]*b[2] - a[2]*b[1],
-// 		a[2]*b[0] - a[0]*b[2],
-// 		a[0]*b[1] - a[1]*b[0],
-// 	}
-// 	return c.insert(cross, 0)
-// }
-//
-// // Mag returns the magnitude of the vector represented by the last x stack values
-// func (c *Clac) Mag() error {
-// 	return c.applyFloat(variadic, func(vals []float64) (float64, error) {
-// 		magSq, _ := reduceFloat(0, vals, func(a, b float64) (float64, error) {
-// 			return a + b*b, nil
-// 		})
-// 		return math.Sqrt(magSq), nil
-// 	})
-// }
+// Dot returns the dot product of two vectors of size x
+// The vectors are composed of the 2*x items on the stack above x
+func (c *Clac) Dot() error {
+	num, err := c.popCount()
+	if err != nil {
+		return err
+	}
+	return c.dot(num)
+}
 
-func True(val value.Value) bool {
+// Dot3 returns the dot product of two 3D vectors
+// The vectors are composed of the last 6 items on the stack
+func (c *Clac) Dot3() error {
+	return c.dot(3)
+}
+
+func (c *Clac) dot(num int) error {
+	e := &eval{}
+	if num < 1 {
+		return errInvalidArg
+	}
+	vals, err := c.remove(0, 2*num)
+	if err != nil {
+		return err
+	}
+	a, b := vals[:num], vals[num:]
+	dot := zero
+	for i := range a {
+		dot = e.binary(dot, "+", e.binary(a[i], "*", b[i]))
+	}
+	if e.err != nil {
+		return e.err
+	}
+	return c.push(dot)
+}
+
+// Cross returns the cross product of two 3D vectors
+// The vectors are composed of the last 6 items on the stack
+func (c *Clac) Cross() error {
+	e := &eval{}
+	vals, err := c.remove(0, 6)
+	if err != nil {
+		return err
+	}
+	a, b := vals[:3], vals[3:]
+	cross := []value.Value{
+		e.binary(e.binary(a[1], "*", b[2]), "-", e.binary(a[2], "*", b[1])),
+		e.binary(e.binary(a[2], "*", b[0]), "-", e.binary(a[0], "*", b[2])),
+		e.binary(e.binary(a[0], "*", b[1]), "-", e.binary(a[1], "*", b[0])),
+	}
+	if e.err != nil {
+		return e.err
+	}
+	return c.insert(cross, 0)
+}
+
+// Mag returns the magnitude of the vector represented by the last x stack values
+func (c *Clac) Mag() error {
+	return c.applyFloat(variadic, func(vals []value.Value) (value.Value, error) {
+		e := &eval{}
+		magSq, _ := reduceFloat(zero, vals, func(a, b value.Value) (value.Value, error) {
+			mag := e.binary(a, "+", e.binary(b, "*", b))
+			return mag, e.err
+		})
+		return unary("sqrt", magSq)
+	})
+}
+
+func isTrue(val value.Value) bool {
 	ival, ok := val.(value.Int)
-	fmt.Println("ival:", ival)
 	if !ok {
 		return true
 	}
-	fmt.Printf("%T\n", ival)
-	// 	return int64(ival) != 0
-	return true
+	return ival != 0
 }

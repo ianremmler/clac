@@ -98,6 +98,10 @@ var (
 		"rotr":   cl.RotR,
 		"unrot":  cl.Unrot,
 		"unrotr": cl.UnrotR,
+		"mag":    cl.Mag,
+		"dot":    cl.Dot,
+		"dot3":   cl.Dot3,
+		"cross":  cl.Cross,
 		"pi":     func() error { return cl.Push(clac.Pi) },
 		"e":      func() error { return cl.Push(clac.E) },
 		"quit":   func() error { exit(); return nil },
@@ -196,7 +200,7 @@ func printCmdLineStack(stack clac.Stack) {
 		val := stack[len(stack)-i-1]
 		if doHexOut {
 			var err error
-			if val, err = clac.Unary("floor", val); err != nil {
+			if val, err = clac.IntVal(val); err != nil {
 				fmt.Print("error")
 				continue
 			}
@@ -273,7 +277,7 @@ func printStack(stack clac.Stack) {
 		if i < len(stack) {
 			clac.SetFormat("%30.23g")
 			line += fmt.Sprintf(" %30s", stack[i])
-			if val, err := clac.Unary("floor", stack[i]); err == nil {
+			if val, err := clac.IntVal(stack[i]); err == nil {
 				clac.SetFormat("%#27x")
 				hexStr := fmt.Sprintf(" %29s", val)
 				if len(hexStr) > 30 {

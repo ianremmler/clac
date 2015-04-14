@@ -10,7 +10,8 @@ import (
 )
 
 var (
-	Pi, E value.BigFloat
+	zero  value.Value = value.Int(0)
+	E, Pi value.Value
 
 	errTooFewArgs    = errors.New("too few arguments")
 	errInvalidArg    = errors.New("invalid argument")
@@ -18,7 +19,6 @@ var (
 	errNoMoreChanges = errors.New("no more changes")
 	errNoHistUpdate  = errors.New("") // for cmds that don't add to history
 
-	zero   = value.Int(0)
 	ivyCfg = &config.Config{}
 )
 
@@ -162,14 +162,27 @@ func (c *Clac) pop() (value.Value, error) {
 	return x[0], err
 }
 
+// IntVal returns the given value converted to an integer
+func IntVal(val value.Value) (value.Int, error) {
+	val, err := unary("floor", val)
+	if err != nil {
+		return zero.(value.Int), err
+	}
+	ival, ok := val.(value.Int)
+	if !ok {
+		return zero.(value.Int), errInvalidArg
+	}
+	return ival, nil
+}
+
 func (c *Clac) popIntMin(min int) (int, error) {
 	x, err := c.pop()
 	if err != nil {
 		return 0, err
 	}
-	xi, ok := x.(value.Int)
-	if !ok {
-		return 0, errInvalidArg
+	xi, err := IntVal(x)
+	if err != nil {
+		return 0, err
 	}
 	n := int(xi)
 	if n < min {
@@ -219,13 +232,13 @@ func (c *Clac) rotate(pos, num int, isDown bool) error {
 	return c.insert(vals, to)
 }
 
-func Unary(op string, a value.Value) (val value.Value, err error) {
+func unary(op string, a value.Value) (val value.Value, err error) {
 	defer func() { err = errVal(recover()) }()
 	val = value.Unary(op, a)
 	return val, err
 }
 
-func Binary(a value.Value, op string, b value.Value) (val value.Value, err error) {
+func binary(a value.Value, op string, b value.Value) (val value.Value, err error) {
 	defer func() { err = errVal(recover()) }()
 	val = value.Binary(a, op, b)
 	return val, err
@@ -239,4 +252,25 @@ func errVal(val interface{}) error {
 		return err
 	}
 	return errors.New("unknown error")
+}
+
+type eval struct {
+	err error
+}
+
+func (e *eval) e(f func() (value.Value, error)) value.Value {
+	if e.err != nil {
+		return zero
+	}
+	var val value.Value
+	val, e.err = f()
+	return val
+}
+
+func (e *eval) unary(op string, a value.Value) value.Value {
+	return e.e(func() (value.Value, error) { return unary(op, a) })
+}
+
+func (e *eval) binary(a value.Value, op string, b value.Value) value.Value {
+	return e.e(func() (value.Value, error) { return binary(a, op, b) })
 }
