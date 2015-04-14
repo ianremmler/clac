@@ -401,35 +401,38 @@ func (c *Clac) Atan() error {
 // Atan2 returns the arctangent of y / x
 func (c *Clac) Atan2() error {
 	return c.applyFloat(2, func(vals []value.Value) (value.Value, error) {
-		e := &eval{}
-		x, y := vals[1], vals[0]
-
-		// special cases
-		tan := value.Value(zero)
-		if isTrue(e.binary(y, "==", zero)) {
-			if isTrue(e.binary(x, "<", zero)) {
-				tan = Pi
-			}
-			return tan, e.err
-		}
-		if isTrue(e.binary(x, "==", zero)) {
-			ySgn := e.unary("sgn", y)
-			tan = e.binary(Pi, "/", value.Int(2))
-			tan = e.binary(tan, "*", ySgn)
-			return tan, e.err
-		}
-
-		tan = e.binary(y, "/", x)
-		angle := e.unary("atan", tan)
-		if isTrue(e.binary(x, "<", zero)) {
-			if isTrue(e.binary(tan, "<=", zero)) {
-				angle = e.binary(angle, "+", Pi)
-			} else {
-				angle = e.binary(angle, "-", Pi)
-			}
-		}
-		return angle, e.err
+		return atan2(vals[1], vals[0])
 	})
+}
+
+func atan2(x, y value.Value) (value.Value, error) {
+	e := &eval{}
+
+	// special cases
+	tan := value.Value(zero)
+	if isTrue(e.binary(y, "==", zero)) {
+		if isTrue(e.binary(x, "<", zero)) {
+			tan = Pi
+		}
+		return tan, e.err
+	}
+	if isTrue(e.binary(x, "==", zero)) {
+		ySgn := e.unary("sgn", y)
+		tan = e.binary(Pi, "/", value.Int(2))
+		tan = e.binary(tan, "*", ySgn)
+		return tan, e.err
+	}
+
+	tan = e.binary(y, "/", x)
+	angle := e.unary("atan", tan)
+	if isTrue(e.binary(x, "<", zero)) {
+		if isTrue(e.binary(tan, "<=", zero)) {
+			angle = e.binary(angle, "+", Pi)
+		} else {
+			angle = e.binary(angle, "-", Pi)
+		}
+	}
+	return angle, e.err
 }
 
 // DegToRad converts a value in degrees to radians.
@@ -452,37 +455,42 @@ func (c *Clac) RadToDeg() error {
 	})
 }
 
-// // RectToPolar converts 2D rectangular coordinates y,x to polar coordinates.
-// func (c *Clac) RectToPolar() error {
-// 	y, err := c.pop()
-// 	if err != nil {
-// 		return err
-// 	}
-// 	x, err := c.pop()
-// 	if err != nil {
-// 		return err
-// 	}
-// 	if c.push(math.Hypot(x, y)) != nil {
-// 		return err
-// 	}
-// 	return c.push(math.Atan2(y, x))
-// }
-//
-// // PolarToRect converts 2D polar coordinates y<x to rectangular coordinates.
-// func (c *Clac) PolarToRect() error {
-// 	theta, err := c.pop()
-// 	if err != nil {
-// 		return err
-// 	}
-// 	r, err := c.pop()
-// 	if err != nil {
-// 		return err
-// 	}
-// 	if c.push(r*math.Cos(theta)) != nil {
-// 		return err
-// 	}
-// 	return c.push(r * math.Sin(theta))
-// }
+// Hypot calculates the 2D hypotenuse of a right triangles with legs x and y
+func (c *Clac) Hypot() error {
+	return c.applyFloat(1, func(vals []value.Value) (value.Value, error) {
+		return hypot(vals[1], vals[0])
+	})
+}
+
+func hypot(x, y value.Value) (value.Value, error) {
+	e := &eval{}
+	hyp := e.unary("sqrt", e.binary(e.binary(x, "*", x), "+", e.binary(y, "*", y)))
+	return hyp, e.err
+}
+
+// RectToPolar converts 2D rectangular coordinates y,x to polar coordinates.
+func (c *Clac) RectToPolar() error {
+	e := &eval{}
+	y := e.e(func() (value.Value, error) { return c.pop() })
+	x := e.e(func() (value.Value, error) { return c.pop() })
+	radius := e.e(func() (value.Value, error) { return hypot(x, y) })
+	e.e(func() (value.Value, error) { return zero, c.push(radius) })
+	angle := e.e(func() (value.Value, error) { return atan2(x, y) })
+	e.e(func() (value.Value, error) { return zero, c.push(angle) })
+	return e.err
+}
+
+// PolarToRect converts 2D polar coordinates y<x to rectangular coordinates.
+func (c *Clac) PolarToRect() error {
+	e := &eval{}
+	angle := e.e(func() (value.Value, error) { return c.pop() })
+	radius := e.e(func() (value.Value, error) { return c.pop() })
+	x := e.binary(radius, "*", e.unary("cos", angle))
+	e.e(func() (value.Value, error) { return zero, c.push(x) })
+	y := e.binary(radius, "*", e.unary("sin", angle))
+	e.e(func() (value.Value, error) { return zero, c.push(y) })
+	return e.err
+}
 
 // Floor returns largest integer not greater than x.
 func (c *Clac) Floor() error {
@@ -610,13 +618,6 @@ func (c *Clac) MaxN() error {
 		})
 	})
 }
-
-// // Gamma returns the gamma function of x
-// func (c *Clac) Gamma() error {
-// 	return c.applyFloat(1, func(vals []float64) (float64, error) {
-// 		return math.Gamma(vals[0]), nil
-// 	})
-// }
 
 func factorial(val value.Value) (value.Value, error) {
 	e := eval{}
