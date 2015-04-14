@@ -167,7 +167,7 @@ func (c *Clac) applyFloat(arity int, f floatFunc) error {
 	}
 	vals, err := c.remove(0, arity)
 	if err != nil {
-		return err
+		return errTooFewArgs
 	}
 	res, err := f(vals)
 	if err != nil {
@@ -201,7 +201,7 @@ func (c *Clac) applyInt(arity int, f intFunc) error {
 	}
 	vals, err := c.remove(0, arity)
 	if err != nil {
-		return err
+		return errTooFewArgs
 	}
 	ivals := make([]value.Value, arity)
 	for i, v := range vals {

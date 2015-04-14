@@ -123,10 +123,10 @@ func (c *Clac) checkRange(pos, num int, isEndOK bool) (int, int, error) {
 	}
 	start, end := pos, pos+num-1
 	if start < 0 || start > end {
-		return 0, 0, errInvalidArg
+		return 0, 0, errOutOfRange
 	}
 	if start >= max || end >= max {
-		return 0, 0, errTooFewArgs
+		return 0, 0, errOutOfRange
 	}
 	return start, end, nil
 }
@@ -183,7 +183,7 @@ func (c *Clac) popIntMin(min int) (int, error) {
 		return 0, err
 	}
 	if n < min {
-		return 0, errInvalidArg
+		return 0, errOutOfRange
 	}
 	return n, nil
 }
