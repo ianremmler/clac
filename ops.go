@@ -205,7 +205,7 @@ func (c *Clac) applyInt(arity int, f intFunc) error {
 	}
 	ivals := make([]value.Value, arity)
 	for i, v := range vals {
-		ivals[i], err = IntVal(v)
+		ivals[i], err = Trunc(v)
 		if err != nil {
 			return err
 		}
@@ -506,12 +506,12 @@ func (c *Clac) Ceil() error {
 	})
 }
 
-// // Trunc returns x truncated to the nearest integer toward 0.
-// func (c *Clac) Trunc() error {
-// 	return c.applyFloat(1, func(vals []float64) (float64, error) {
-// 		return math.Trunc(vals[0]), nil
-// 	})
-// }
+// Trunc returns x truncated to the nearest integer toward 0.
+func (c *Clac) Trunc() error {
+	return c.applyFloat(1, func(vals []value.Value) (value.Value, error) {
+		return Trunc(vals[0])
+	})
+}
 
 // And returns the bitwise and of the integer portions of y and x.
 func (c *Clac) And() error {
@@ -619,25 +619,24 @@ func (c *Clac) MaxN() error {
 	})
 }
 
-func factorial(val value.Value) (value.Value, error) {
-	e := eval{}
-	ival, ok := val.(value.Int)
-	if !ok {
-		return zero, errInvalidArg
-	}
-	n := int(ival)
-	var fact value.Value = value.Int(1)
-	for i := 2; i <= n; i++ {
-		fact = e.binary(fact, "*", value.Int(i))
-	}
-	return fact, e.err
-}
-
 // Factorial returns the factorial of x
 func (c *Clac) Factorial() error {
 	return c.applyInt(1, func(vals []value.Value) (value.Value, error) {
 		return factorial(vals[0])
 	})
+}
+
+func factorial(val value.Value) (value.Value, error) {
+	e := eval{}
+	n, err := valToInt(val)
+	if err != nil {
+		return zero, err
+	}
+	var fact value.Value = value.Int(1)
+	for i := 2; i <= n; i++ {
+		fact = e.binary(fact, "*", value.Int(i))
+	}
+	return fact, e.err
 }
 
 // Comb returns the number of combinations of x taken from y

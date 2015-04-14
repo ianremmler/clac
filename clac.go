@@ -162,33 +162,42 @@ func (c *Clac) pop() (value.Value, error) {
 	return x[0], err
 }
 
-// IntVal returns the given value converted to an integer
-func IntVal(val value.Value) (value.Int, error) {
-	val, err := unary("floor", val)
-	if err != nil {
-		return zero.(value.Int), err
+// Trunc returns the given value rounded to the nearest integer toward 0
+func Trunc(val value.Value) (value.Value, error) {
+	e := &eval{}
+	if isTrue(e.binary(val, ">=", zero)) {
+		val = e.unary("floor", val)
+	} else {
+		val = e.unary("ceil", val)
 	}
-	ival, ok := val.(value.Int)
-	if !ok {
-		return zero.(value.Int), errInvalidArg
-	}
-	return ival, nil
+	return val, e.err
 }
 
 func (c *Clac) popIntMin(min int) (int, error) {
-	x, err := c.pop()
+	val, err := c.pop()
 	if err != nil {
 		return 0, err
 	}
-	xi, err := IntVal(x)
+	n, err := valToInt(val)
 	if err != nil {
 		return 0, err
 	}
-	n := int(xi)
 	if n < min {
 		return 0, errInvalidArg
 	}
-	return n, err
+	return n, nil
+}
+
+func valToInt(val value.Value) (int, error) {
+	val, err := Trunc(val)
+	if err != nil {
+		return 0, err
+	}
+	ival, ok := val.(value.Int)
+	if !ok {
+		return 0, errInvalidArg
+	}
+	return int(ival), nil
 }
 
 func (c *Clac) popIndex() (int, error) {

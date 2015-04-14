@@ -71,6 +71,7 @@ var (
 		"ptor":   cl.PolarToRect,
 		"floor":  cl.Floor,
 		"ceil":   cl.Ceil,
+		"trunc":  cl.Trunc,
 		"and":    cl.And,
 		"or":     cl.Or,
 		"xor":    cl.Xor,
@@ -203,7 +204,7 @@ func printCmdLineStack(stack clac.Stack) {
 		val := stack[len(stack)-i-1]
 		if doHexOut {
 			var err error
-			if val, err = clac.IntVal(val); err != nil {
+			if val, err = clac.Trunc(val); err != nil {
 				fmt.Print("error")
 				continue
 			}
@@ -280,7 +281,7 @@ func printStack(stack clac.Stack) {
 		if i < len(stack) {
 			clac.SetFormat("%30.23g")
 			line += fmt.Sprintf(" %30s", stack[i])
-			if val, err := clac.IntVal(stack[i]); err == nil {
+			if val, err := clac.Trunc(stack[i]); err == nil {
 				clac.SetFormat("%#27x")
 				hexStr := fmt.Sprintf(" %29s", val)
 				if len(hexStr) > 30 {
