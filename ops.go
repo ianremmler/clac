@@ -457,7 +457,7 @@ func (c *Clac) RadToDeg() error {
 
 // Hypot calculates the 2D hypotenuse of a right triangles with legs x and y
 func (c *Clac) Hypot() error {
-	return c.applyFloat(1, func(vals []value.Value) (value.Value, error) {
+	return c.applyFloat(2, func(vals []value.Value) (value.Value, error) {
 		return hypot(vals[1], vals[0])
 	})
 }
