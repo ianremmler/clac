@@ -15,7 +15,6 @@ import (
 
 	"github.com/ianremmler/clac"
 	"golang.org/x/crypto/ssh/terminal"
-	"robpike.io/ivy/value"
 )
 
 const usageStr = `usage:
@@ -249,12 +248,7 @@ func parseInput(input string, errorHandler func(err error)) {
 			}
 			break
 		}
-		if clac.IsNum(tok) {
-			num, err := value.Parse(tok)
-			if err != nil {
-				errorHandler(err)
-				continue
-			}
+		if num, err := clac.ParseNum(tok); err == nil {
 			if err = cl.Exec(func() error { return cl.Push(num) }); err != nil {
 				errorHandler(fmt.Errorf("push: %s", err))
 			}

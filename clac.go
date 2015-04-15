@@ -3,7 +3,6 @@ package clac
 
 import (
 	"errors"
-	"math/big"
 
 	"robpike.io/ivy/config"
 	"robpike.io/ivy/value"
@@ -31,10 +30,14 @@ func SetFormat(format string) {
 	ivyCfg.SetFormat(format)
 }
 
-// IsNum returns whether the string represents a number
-func IsNum(in string) bool {
-	_, ok := big.NewFloat(0).SetString(in)
-	return ok
+// ParseNum wraps value.Parse() to handle panics on unexpected input
+func ParseNum(tok string) (val value.Value, err error) {
+	defer func() {
+		if recover() != nil {
+			err = errInvalidArg
+		}
+	}()
+	return value.Parse(tok)
 }
 
 // Stack represents a stack of floating point numbers.
