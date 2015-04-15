@@ -109,6 +109,7 @@ var cmdMap = map[string]func() error{
 	"cross":  cl.Cross,
 	"pi":     func() error { return cl.Push(clac.Pi) },
 	"e":      func() error { return cl.Push(clac.E) },
+	"reset":  func() error { return cl.Reset() },
 	"quit":   func() error { exit(); return nil },
 	"help":   func() error { help(); return nil },
 }

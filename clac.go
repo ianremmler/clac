@@ -91,9 +91,10 @@ func New() *Clac {
 }
 
 // Reset resets clac to its initial state
-func (c *Clac) Reset() {
+func (c *Clac) Reset() error {
 	c.working = Stack{}
 	c.hist = newStackHist()
+	return errNoHistUpdate
 }
 
 // Stack returns the current stack.
