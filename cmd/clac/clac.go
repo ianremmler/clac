@@ -270,22 +270,31 @@ func parseInput(input string, errorHandler func(err error)) {
 }
 
 func printStack(stack clac.Stack) {
-	_, numRows, err := terminal.GetSize(syscall.Stdout)
+	cols, rows, err := terminal.GetSize(syscall.Stdout)
 	if err != nil {
-		numRows = len(stack) + 1
+		rows = len(stack) + 1
+	}
+	// ensure sane width
+	if cols < 20 {
+		cols = 20
 	}
 	clearScreen()
 
-	for i := numRows - 3; i >= 0; i-- {
+	dataCols := cols - 4
+	hexCols := dataCols / 2
+	floatCols := dataCols - hexCols
+	floatFmt := fmt.Sprintf("%%%d.%dg", floatCols-1, floatCols-8)
+	hexFmt := fmt.Sprintf("%%#%dx", hexCols-3)
+	for i := rows - 3; i >= 0; i-- {
 		line := fmt.Sprintf("%02d:", i)
 		if i < len(stack) {
-			clac.SetFormat("%30.23g")
-			line += fmt.Sprintf(" %30s", stack[i])
+			clac.SetFormat(floatFmt)
+			line += fmt.Sprintf(fmt.Sprintf(" %%%ds", floatCols), stack[i])
 			if val, err := clac.Trunc(stack[i]); err == nil {
-				clac.SetFormat("%#27x")
-				hexStr := fmt.Sprintf(" %29s", val)
-				if len(hexStr) > 30 {
-					hexStr = hexStr[:29] + "…"
+				clac.SetFormat(hexFmt)
+				hexStr := fmt.Sprintf(fmt.Sprintf(" %%%ds", hexCols-1), val)
+				if len(hexStr) > hexCols {
+					hexStr = hexStr[:hexCols-1] + "…"
 				}
 				line += hexStr
 			}
@@ -293,7 +302,7 @@ func printStack(stack clac.Stack) {
 		fmt.Println(line)
 	}
 	if lastErr == nil {
-		fmt.Println(strings.Repeat("-", 64))
+		fmt.Println(strings.Repeat("-", cols))
 	} else {
 		fmt.Println("Error:", lastErr)
 	}
