@@ -122,12 +122,12 @@ func (c *Clac) rot(isDown bool) error {
 	return c.rotate(pos, 1, isDown)
 }
 
-// Rotr rotates a range of x stack values, starting at index y, down.
+// RotR rotates a range of x stack values, starting at index y, down.
 func (c *Clac) RotR() error {
 	return c.rotR(true)
 }
 
-// Unrotr rotates a range of x stack values, starting at index y, up.
+// UnrotR rotates a range of x stack values, starting at index y, up.
 func (c *Clac) UnrotR() error {
 	return c.rotR(false)
 }

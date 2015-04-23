@@ -28,6 +28,7 @@ func init() {
 	Phi = e.binary(e.binary(value.Int(1), "+", e.unary("sqrt", value.Int(5))), "/", value.Int(2))
 }
 
+// SetFormat sets the ivy output format
 func SetFormat(format string) {
 	ivyCfg.SetFormat(format)
 }
@@ -236,9 +237,9 @@ func (c *Clac) drop(pos, num int) error {
 }
 
 func (c *Clac) rotate(pos, num int, isDown bool) error {
-	from, to := pos, 0
-	if !isDown {
-		from, to = 0, pos-num+1
+	from, to := 0, pos
+	if isDown {
+		from, to = to, from
 	}
 	vals, err := c.remove(from, num)
 	if err != nil {
