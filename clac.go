@@ -9,8 +9,8 @@ import (
 )
 
 var (
-	zero  value.Value = value.Int(0)
-	E, Pi value.Value
+	zero       value.Value = value.Int(0)
+	E, Pi, Phi value.Value
 
 	errTooFewArgs    = errors.New("too few arguments")
 	errInvalidArg    = errors.New("invalid argument")
@@ -24,6 +24,8 @@ var (
 func init() {
 	value.SetConfig(ivyCfg)
 	E, Pi = value.Consts()
+	e := &eval{}
+	Phi = e.binary(e.binary(value.Int(1), "+", e.unary("sqrt", value.Int(5))), "/", value.Int(2))
 }
 
 func SetFormat(format string) {
