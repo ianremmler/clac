@@ -337,22 +337,14 @@ func (c *Clac) Ln() error {
 // Lg returns the base 2 logarithm of x.
 func (c *Clac) Lg() error {
 	return c.applyFloat(1, func(vals []value.Value) (value.Value, error) {
-		e := eval{}
-		lnx := e.unary("log", vals[0])
-		ln2 := e.unary("log", value.Int(2))
-		lg := e.binary(lnx, "/", ln2)
-		return lg, e.err
+		return binary(value.Int(2), "log", vals[0])
 	})
 }
 
 // Log returns the base 10 logarithm of x.
 func (c *Clac) Log() error {
 	return c.applyFloat(1, func(vals []value.Value) (value.Value, error) {
-		e := &eval{}
-		lnx := e.unary("log", vals[0])
-		ln10 := e.unary("log", value.Int(10))
-		log := e.binary(lnx, "/", ln10)
-		return log, e.err
+		return binary(value.Int(10), "log", vals[0])
 	})
 }
 
