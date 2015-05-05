@@ -52,6 +52,7 @@ var cmdMap = map[string]func() error{
 	"^":      cl.Pow,
 	"2^":     cl.Pow2,
 	"10^":    cl.Pow10,
+	"logn":   cl.LogN,
 	"ln":     cl.Ln,
 	"log":    cl.Log,
 	"lg":     cl.Lg,
