@@ -27,9 +27,11 @@ Command line mode requires input from arguments (without -i) and/or stdin.
 
 var (
 	// flags
-	doInitStack      = false
-	doHexOut         = false
-	cliPrec     uint = 12
+	doInitStack        = false
+	doHexOut           = false
+	isInteractive      = false
+	isCli              = false
+	cliPrec       uint = 12
 
 	trm         *terminal.Terminal
 	oldTrmState *terminal.State
@@ -142,7 +144,8 @@ func init() {
 
 func main() {
 	flag.Parse()
-	if processCmdLine() {
+	processCmdLine()
+	if isCli {
 		printCmdLineStack(cl.Stack())
 		os.Exit(0)
 	}
@@ -180,7 +183,7 @@ func repl() {
 	}
 }
 
-func processCmdLine() bool {
+func processCmdLine() {
 	input := ""
 	if stat, err := os.Stdin.Stat(); err == nil && stat.Mode()&os.ModeNamedPipe != 0 {
 		if pipeInput, err := ioutil.ReadAll(os.Stdin); err == nil {
@@ -191,10 +194,11 @@ func processCmdLine() bool {
 		input += " " + strings.Join(flag.Args(), " ")
 	}
 	if input != "" {
+		isCli = !doInitStack
+		isInteractive = false
 		parseInput(string(input), func(err error) { log.Println(err) })
-		return !doInitStack
 	}
-	return false
+	isInteractive = !isCli
 }
 
 func printCmdLineStack(stack clac.Stack) {
@@ -227,7 +231,12 @@ func exit() {
 }
 
 func help() {
-	clearScreen()
+	if !isCli && !isInteractive {
+		return
+	}
+	if isInteractive {
+		clearScreen()
+	}
 	for i := range cmdList {
 		fmt.Printf("%-8s", cmdList[i])
 		if (i+1)%5 == 0 {
@@ -237,8 +246,10 @@ func help() {
 	if len(cmdList)%5 != 0 {
 		fmt.Println()
 	}
-	fmt.Print("\n[Press any key to continue]")
-	waitKey()
+	if isInteractive {
+		fmt.Print("\n[Press any key to continue]")
+		waitKey()
+	}
 }
 
 func parseInput(input string, errorHandler func(err error)) {
