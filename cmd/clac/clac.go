@@ -29,7 +29,7 @@ var (
 	// flags
 	doInitStack      = false
 	doHexOut         = false
-	cliPrec     uint = 5
+	cliPrec     uint = 12
 
 	trm         *terminal.Terminal
 	oldTrmState *terminal.State
