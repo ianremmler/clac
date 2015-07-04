@@ -309,7 +309,7 @@ func (c *Clac) Sqrt() error {
 // Exp returns e to the power of x.
 func (c *Clac) Exp() error {
 	return c.applyFloat(1, func(vals []value.Value) (value.Value, error) {
-		return binary(E, "**", vals[0])
+		return unary("**", vals[0])
 	})
 }
 
