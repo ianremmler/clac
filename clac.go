@@ -19,6 +19,7 @@ var (
 	errNoHistUpdate  = errors.New("") // for cmds that don't add to history
 
 	ivyCfg = &config.Config{}
+	ivyCtx value.Context
 )
 
 func init() {
@@ -250,13 +251,13 @@ func (c *Clac) rotate(pos, num int, isDown bool) error {
 
 func unary(op string, a value.Value) (val value.Value, err error) {
 	defer func() { err = errVal(recover()) }()
-	val = value.Unary(op, a)
+	val = value.Unary(ivyCtx, op, a)
 	return val, err
 }
 
 func binary(a value.Value, op string, b value.Value) (val value.Value, err error) {
 	defer func() { err = errVal(recover()) }()
-	val = value.Binary(a, op, b)
+	val = value.Binary(ivyCtx, a, op, b)
 	return val, err
 }
 
