@@ -10,6 +10,8 @@ Features include:
 - Decimal and hexidecimal display of all stack values, all the time
 - Pipeline mode processes input from stdin and prints results to stdout
 
+Clac uses Rob Pike's [Ivy](http://robpike.io/ivy) calculator for exact/high
+precision calculations.  Ivy requires Go 1.5, hence so does Clac.
+
 To get it, make sure you have [Go](http://golang.org/doc/install) installed,
 then run: `go get github.com/ianremmler/clac/cmd/clac`.
-
