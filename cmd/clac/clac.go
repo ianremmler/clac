@@ -2,13 +2,11 @@ package main
 
 import (
 	"bufio"
-	"errors"
 	"flag"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
-	"math"
 	"os"
 	"os/signal"
 	"sort"
@@ -22,101 +20,103 @@ import (
 const usageStr = `usage:
 
 Interactive:  clac [-i <input>]
-Command line: [... |] clac [-x] [<input>]
+Command line: clac [-x | -p <precision>] <input>
 
 Command line mode requires input from arguments (without -i) and/or stdin.
 `
 
 var (
+	// flags
+	doInitStack        = false
+	doHexOut           = false
+	isInteractive      = false
+	isCli              = false
+	cliPrec       uint = 12
+
 	trm         *terminal.Terminal
 	oldTrmState *terminal.State
 	lastErr     error
 	cl          = clac.New()
-	doHexOut    = false
-	doInitStack = false
 	cmdList     = []string{}
-	cmdMap      = map[string]func() error{
-		"neg":    cl.Neg,
-		"abs":    cl.Abs,
-		"inv":    cl.Inv,
-		"+":      cl.Add,
-		"-":      cl.Sub,
-		"*":      cl.Mul,
-		"/":      cl.Div,
-		"mod":    cl.Mod,
-		"exp":    cl.Exp,
-		"^":      cl.Pow,
-		"2^":     cl.Pow2,
-		"10^":    cl.Pow10,
-		"ln":     cl.Ln,
-		"log":    cl.Log,
-		"lg":     cl.Lg,
-		"sqrt":   cl.Sqrt,
-		"hypot":  cl.Hypot,
-		"gamma":  cl.Gamma,
-		"!":      cl.Factorial,
-		"comb":   cl.Comb,
-		"perm":   cl.Perm,
-		"sin":    cl.Sin,
-		"cos":    cl.Cos,
-		"tan":    cl.Tan,
-		"asin":   cl.Asin,
-		"acos":   cl.Acos,
-		"atan":   cl.Atan,
-		"sinh":   cl.Sinh,
-		"cosh":   cl.Cosh,
-		"tanh":   cl.Tanh,
-		"asinh":  cl.Asinh,
-		"acosh":  cl.Acosh,
-		"atanh":  cl.Atanh,
-		"atan2":  cl.Atan2,
-		"dtor":   cl.DegToRad,
-		"rtod":   cl.RadToDeg,
-		"floor":  cl.Floor,
-		"rtop":   cl.RectToPolar,
-		"ptor":   cl.PolarToRect,
-		"ceil":   cl.Ceil,
-		"trunc":  cl.Trunc,
-		"and":    cl.And,
-		"or":     cl.Or,
-		"xor":    cl.Xor,
-		"not":    cl.Not,
-		"andn":   cl.AndN,
-		"orn":    cl.OrN,
-		"xorn":   cl.XorN,
-		"sum":    cl.Sum,
-		"avg":    cl.Avg,
-		"dot":    cl.Dot,
-		"dot3":   cl.Dot3,
-		"cross":  cl.Cross,
-		"mag":    cl.Mag,
-		"clear":  cl.Clear,
-		"drop":   cl.Drop,
-		"dropn":  cl.DropN,
-		"dropr":  cl.DropR,
-		"dup":    cl.Dup,
-		"dupn":   cl.DupN,
-		"dupr":   cl.DupR,
-		"pick":   cl.Pick,
-		"swap":   cl.Swap,
-		"depth":  cl.Depth,
-		"undo":   cl.Undo,
-		"redo":   cl.Redo,
-		"min":    cl.Min,
-		"max":    cl.Max,
-		"minn":   cl.MinN,
-		"maxn":   cl.MaxN,
-		"rot":    cl.Rot,
-		"rotr":   cl.RotR,
-		"unrot":  cl.Unrot,
-		"unrotr": cl.UnrotR,
-		"pi":     func() error { return cl.Push(math.Pi) },
-		"e":      func() error { return cl.Push(math.E) },
-		"phi":    func() error { return cl.Push(math.Phi) },
-		"quit":   func() error { exit(); return nil },
-		"help":   func() error { help(); return nil },
-	}
 )
+
+var cmdMap = map[string]func() error{
+	"neg":    cl.Neg,
+	"abs":    cl.Abs,
+	"inv":    cl.Inv,
+	"+":      cl.Add,
+	"-":      cl.Sub,
+	"*":      cl.Mul,
+	"/":      cl.Div,
+	"div":    cl.IntDiv,
+	"mod":    cl.Mod,
+	"exp":    cl.Exp,
+	"^":      cl.Pow,
+	"2^":     cl.Pow2,
+	"10^":    cl.Pow10,
+	"logn":   cl.LogN,
+	"ln":     cl.Ln,
+	"log":    cl.Log,
+	"lg":     cl.Lg,
+	"sqrt":   cl.Sqrt,
+	"!":      cl.Factorial,
+	"comb":   cl.Comb,
+	"perm":   cl.Perm,
+	"sin":    cl.Sin,
+	"cos":    cl.Cos,
+	"tan":    cl.Tan,
+	"asin":   cl.Asin,
+	"acos":   cl.Acos,
+	"atan":   cl.Atan,
+	"atan2":  cl.Atan2,
+	"dtor":   cl.DegToRad,
+	"rtod":   cl.RadToDeg,
+	"rtop":   cl.RectToPolar,
+	"ptor":   cl.PolarToRect,
+	"floor":  cl.Floor,
+	"ceil":   cl.Ceil,
+	"trunc":  cl.Trunc,
+	"and":    cl.And,
+	"or":     cl.Or,
+	"xor":    cl.Xor,
+	"not":    cl.Not,
+	"andn":   cl.AndN,
+	"orn":    cl.OrN,
+	"xorn":   cl.XorN,
+	"sum":    cl.Sum,
+	"avg":    cl.Avg,
+	"clear":  cl.Clear,
+	"drop":   cl.Drop,
+	"dropn":  cl.DropN,
+	"dropr":  cl.DropR,
+	"dup":    cl.Dup,
+	"dupn":   cl.DupN,
+	"dupr":   cl.DupR,
+	"pick":   cl.Pick,
+	"swap":   cl.Swap,
+	"depth":  cl.Depth,
+	"undo":   cl.Undo,
+	"redo":   cl.Redo,
+	"min":    cl.Min,
+	"max":    cl.Max,
+	"minn":   cl.MinN,
+	"maxn":   cl.MaxN,
+	"rot":    cl.Rot,
+	"rotr":   cl.RotR,
+	"unrot":  cl.Unrot,
+	"unrotr": cl.UnrotR,
+	"mag":    cl.Mag,
+	"hyp":    cl.Hypot,
+	"dot":    cl.Dot,
+	"dot3":   cl.Dot3,
+	"cross":  cl.Cross,
+	"pi":     func() error { return cl.Push(clac.Pi) },
+	"e":      func() error { return cl.Push(clac.E) },
+	"phi":    func() error { return cl.Push(clac.Phi) },
+	"reset":  func() error { return cl.Reset() },
+	"quit":   func() error { exit(); return nil },
+	"help":   func() error { help(); return nil },
+}
 
 type term struct {
 	io.Reader
@@ -131,7 +131,9 @@ func init() {
 	}
 	sort.Strings(cmdList)
 	flag.BoolVar(&doHexOut, "x", doHexOut,
-		"In command line mode, output stack in hexidecimal format")
+		"Command line mode: hexidecimal output")
+	flag.UintVar(&cliPrec, "p", cliPrec,
+		"Command line mode: output precision")
 	flag.BoolVar(&doInitStack, "i", doInitStack,
 		"Initialize with input from command line arguments")
 	flag.Usage = func() {
@@ -142,7 +144,8 @@ func init() {
 
 func main() {
 	flag.Parse()
-	if processCmdLine() {
+	processCmdLine()
+	if isCli {
 		printCmdLineStack(cl.Stack())
 		os.Exit(0)
 	}
@@ -168,7 +171,6 @@ func main() {
 func repl() {
 	for {
 		printStack(cl.Stack())
-		// 		input, err := lnr.Prompt(" ")
 		input, err := trm.ReadLine()
 		lastErr = nil
 		if err == io.EOF {
@@ -177,14 +179,11 @@ func repl() {
 		if err != nil {
 			continue
 		}
-		if strings.TrimSpace(input) != "" {
-			// 			lnr.AppendHistory(input)
-		}
 		parseInput(input, func(err error) { lastErr = err })
 	}
 }
 
-func processCmdLine() bool {
+func processCmdLine() {
 	input := ""
 	if stat, err := os.Stdin.Stat(); err == nil && stat.Mode()&os.ModeNamedPipe != 0 {
 		if pipeInput, err := ioutil.ReadAll(os.Stdin); err == nil {
@@ -195,19 +194,29 @@ func processCmdLine() bool {
 		input += " " + strings.Join(flag.Args(), " ")
 	}
 	if input != "" {
+		isCli = !doInitStack
+		isInteractive = false
 		parseInput(string(input), func(err error) { log.Println(err) })
-		return !doInitStack
 	}
-	return false
+	isInteractive = !isCli
 }
 
 func printCmdLineStack(stack clac.Stack) {
+	if doHexOut {
+		clac.SetFormat("%#x")
+	} else {
+		clac.SetFormat(fmt.Sprintf("%%.%dg", cliPrec))
+	}
 	for i := range stack {
+		val := stack[len(stack)-i-1]
 		if doHexOut {
-			fmt.Printf("%#x", int64(stack[len(stack)-i-1]))
-		} else {
-			fmt.Print(stack[len(stack)-i-1])
+			var err error
+			if val, err = clac.Trunc(val); err != nil {
+				fmt.Print("error")
+				continue
+			}
 		}
+		fmt.Print(val)
 		if i < len(stack)-1 {
 			fmt.Print(" ")
 		}
@@ -217,13 +226,17 @@ func printCmdLineStack(stack clac.Stack) {
 
 func exit() {
 	fmt.Println()
-	// 	lnr.Close()
 	terminal.Restore(syscall.Stdin, oldTrmState)
 	os.Exit(0)
 }
 
 func help() {
-	clearScreen()
+	if !isCli && !isInteractive {
+		return
+	}
+	if isInteractive {
+		clearScreen()
+	}
 	for i := range cmdList {
 		fmt.Printf("%-8s", cmdList[i])
 		if (i+1)%5 == 0 {
@@ -233,8 +246,10 @@ func help() {
 	if len(cmdList)%5 != 0 {
 		fmt.Println()
 	}
-	fmt.Print("\n[Press any key to continue]")
-	waitKey()
+	if isInteractive {
+		fmt.Print("\n[Press any key to continue]")
+		waitKey()
+	}
 }
 
 func parseInput(input string, errorHandler func(err error)) {
@@ -247,42 +262,56 @@ func parseInput(input string, errorHandler func(err error)) {
 			}
 			break
 		}
-		num, err := clac.ParseNum(tok)
-		if err == nil {
+		if num, err := clac.ParseNum(tok); err == nil {
 			if err = cl.Exec(func() error { return cl.Push(num) }); err != nil {
-				errorHandler(errors.New("push: " + err.Error()))
+				errorHandler(fmt.Errorf("push: %s", err))
 			}
 			continue
 		}
 		if cmd, ok := cmdMap[tok]; ok {
-			if err = cl.Exec(cmd); err != nil {
-				errorHandler(errors.New(tok + ": " + err.Error()))
+			if err := cl.Exec(cmd); err != nil {
+				errorHandler(fmt.Errorf("%s: %s", tok, err))
 			}
 			continue
 		}
-		errorHandler(errors.New(tok + ": invalid input"))
+		errorHandler(fmt.Errorf("%s: invalid input", tok))
 	}
 }
 
 func printStack(stack clac.Stack) {
-	_, numRows, err := terminal.GetSize(syscall.Stdout)
+	cols, rows, err := terminal.GetSize(syscall.Stdout)
 	if err != nil {
-		numRows = len(stack) + 1
+		rows = len(stack) + 1
+	}
+	// ensure sane width
+	if cols < 20 {
+		cols = 20
 	}
 	clearScreen()
 
-	for i := numRows - 3; i >= 0; i-- {
-		fmt.Printf("%2d:", i)
+	dataCols := cols - 4
+	hexCols := dataCols / 2
+	floatCols := dataCols - hexCols
+	floatFmt := fmt.Sprintf("%%%d.%dg", floatCols-1, floatCols-8)
+	hexFmt := fmt.Sprintf("%%#%dx", hexCols-3)
+	for i := rows - 3; i >= 0; i-- {
+		line := fmt.Sprintf("%02d:", i)
 		if i < len(stack) {
-			fmt.Printf("%16.10g", stack[i])
-			if math.Abs(stack[i]) < math.MaxInt64 {
-				fmt.Printf(" %#19x", int64(stack[i]))
+			clac.SetFormat(floatFmt)
+			line += fmt.Sprintf(fmt.Sprintf(" %%%ds", floatCols), stack[i])
+			if val, err := clac.Trunc(stack[i]); err == nil {
+				clac.SetFormat(hexFmt)
+				hexStr := fmt.Sprintf(fmt.Sprintf(" %%%ds", hexCols-1), val)
+				if len(hexStr) > hexCols {
+					hexStr = hexStr[:hexCols-1] + "…"
+				}
+				line += hexStr
 			}
 		}
-		fmt.Println()
+		fmt.Println(line)
 	}
 	if lastErr == nil {
-		fmt.Println(strings.Repeat("-", 40))
+		fmt.Println(strings.Repeat("-", cols))
 	} else {
 		fmt.Println("Error:", lastErr)
 	}
