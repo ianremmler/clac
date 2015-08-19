@@ -4,7 +4,7 @@ clac
 Clac is a practical RPN calculator for the terminal and shell.
 
 Features include:
-- Command line completion and history
+- Command line history
 - Unlimited undo/redo
 - Integer input using C-style decimal, octal, or hexidecimal syntax
 - Decimal and hexidecimal display of all stack values, all the time
