@@ -12,11 +12,11 @@ var (
 	zero       value.Value = value.Int(0)
 	E, Pi, Phi value.Value
 
-	errTooFewArgs    = errors.New("too few arguments")
-	errInvalidArg    = errors.New("invalid argument")
-	errOutOfRange    = errors.New("argument out of range")
-	errNoMoreChanges = errors.New("no more changes")
-	errNoHistUpdate  = errors.New("") // for cmds that don't add to history
+	ErrTooFewArgs    = errors.New("too few arguments")
+	ErrInvalidArg    = errors.New("invalid argument")
+	ErrOutOfRange    = errors.New("argument out of range")
+	ErrNoMoreChanges = errors.New("no more changes")
+	ErrNoHistUpdate  = errors.New("") // for cmds that don't add to history
 
 	ivyCfg = &config.Config{}
 )
@@ -37,7 +37,7 @@ func SetFormat(format string) {
 func ParseNum(tok string) (val value.Value, err error) {
 	defer func() {
 		if recover() != nil {
-			err = errInvalidArg
+			err = ErrInvalidArg
 		}
 	}()
 	return value.Parse(tok)
@@ -97,7 +97,7 @@ func New() *Clac {
 func (c *Clac) Reset() error {
 	c.working = Stack{}
 	c.hist = newStackHist()
-	return errNoHistUpdate
+	return ErrNoHistUpdate
 }
 
 // Stack returns the current stack.
@@ -113,7 +113,7 @@ func (c *Clac) Exec(f func() error) error {
 		c.hist.push(c.working)
 	}
 	c.updateWorking()
-	if err == errNoHistUpdate {
+	if err == ErrNoHistUpdate {
 		return nil
 	}
 	return err
@@ -130,10 +130,10 @@ func (c *Clac) checkRange(pos, num int, isEndOK bool) (int, int, error) {
 	}
 	start, end := pos, pos+num-1
 	if start < 0 || start > end {
-		return 0, 0, errOutOfRange
+		return 0, 0, ErrOutOfRange
 	}
 	if start >= max || end >= max {
-		return 0, 0, errOutOfRange
+		return 0, 0, ErrOutOfRange
 	}
 	return start, end, nil
 }
@@ -164,7 +164,7 @@ func (c *Clac) remove(pos, num int) ([]value.Value, error) {
 func (c *Clac) pop() (value.Value, error) {
 	x, err := c.remove(0, 1)
 	if err != nil {
-		return zero, errTooFewArgs
+		return zero, ErrTooFewArgs
 	}
 	return x[0], err
 }
@@ -190,7 +190,7 @@ func (c *Clac) popIntMin(min int) (int, error) {
 		return 0, err
 	}
 	if n < min {
-		return 0, errOutOfRange
+		return 0, ErrOutOfRange
 	}
 	return n, nil
 }
@@ -202,7 +202,7 @@ func valToInt(val value.Value) (int, error) {
 	}
 	ival, ok := val.(value.Int)
 	if !ok {
-		return 0, errInvalidArg
+		return 0, ErrInvalidArg
 	}
 	return int(ival), nil
 }

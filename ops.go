@@ -12,17 +12,17 @@ const (
 // Undo undoes the last operation.
 func (c *Clac) Undo() error {
 	if !c.hist.undo() {
-		return errNoMoreChanges
+		return ErrNoMoreChanges
 	}
-	return errNoHistUpdate
+	return ErrNoHistUpdate
 }
 
 // Redo redoes the last undone operation.
 func (c *Clac) Redo() error {
 	if !c.hist.redo() {
-		return errNoMoreChanges
+		return ErrNoMoreChanges
 	}
-	return errNoHistUpdate
+	return ErrNoHistUpdate
 }
 
 // y is the penultimate stack value.
@@ -30,7 +30,7 @@ func (c *Clac) Redo() error {
 // Clear clears the stack.
 func (c *Clac) Clear() error {
 	if len(c.working) == 0 {
-		return errNoHistUpdate
+		return ErrNoHistUpdate
 	}
 	c.working = Stack{}
 	return nil
@@ -167,7 +167,7 @@ func (c *Clac) applyFloat(arity int, f floatFunc) error {
 	}
 	vals, err := c.remove(0, arity)
 	if err != nil {
-		return errTooFewArgs
+		return ErrTooFewArgs
 	}
 	res, err := f(vals)
 	if err != nil {
@@ -201,7 +201,7 @@ func (c *Clac) applyInt(arity int, f intFunc) error {
 	}
 	vals, err := c.remove(0, arity)
 	if err != nil {
-		return errTooFewArgs
+		return ErrTooFewArgs
 	}
 	ivals := make([]value.Value, arity)
 	for i, v := range vals {
@@ -683,7 +683,7 @@ func (c *Clac) Dot3() error {
 func (c *Clac) dot(num int) error {
 	e := &eval{}
 	if num < 1 {
-		return errInvalidArg
+		return ErrInvalidArg
 	}
 	vals, err := c.remove(0, 2*num)
 	if err != nil {
