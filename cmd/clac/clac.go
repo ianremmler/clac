@@ -115,7 +115,7 @@ var cmdMap = map[string]func() error{
 	"phi":    func() error { return cl.Push(clac.Phi) },
 	"reset":  func() error { return cl.Reset() },
 	"quit":   func() error { exit(); return nil },
-	"help":   func() error { help(); return nil },
+	"help":   func() error { help(); return clac.ErrNoHistUpdate },
 }
 
 type term struct {
