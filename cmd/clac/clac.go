@@ -209,14 +209,15 @@ func printCmdLineStack(stack clac.Stack) {
 	}
 	for i := range stack {
 		val := stack[len(stack)-i-1]
+		var err error
 		if doHexOut {
-			var err error
-			if val, err = clac.Trunc(val); err != nil {
-				fmt.Print("error")
-				continue
-			}
+			val, err = clac.Trunc(val)
 		}
-		fmt.Print(val)
+		if err != nil {
+			fmt.Print("error")
+		} else {
+			fmt.Print(val)
+		}
 		if i < len(stack)-1 {
 			fmt.Print(" ")
 		}
