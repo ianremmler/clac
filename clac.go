@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"robpike.io/ivy/config"
+	"robpike.io/ivy/exec"
 	"robpike.io/ivy/value"
 )
 
@@ -19,14 +20,17 @@ var (
 	ErrNoHistUpdate  = errors.New("") // for cmds that don't add to history
 
 	ivyCfg = &config.Config{}
-	ivyCtx value.Context
+	ivyCtx = exec.NewContext(ivyCfg)
 )
 
 func init() {
-	value.SetConfig(ivyCfg)
-	E, Pi = value.Consts()
+	E, Pi = value.Consts(ivyCtx)
 	e := &eval{}
 	Phi = e.binary(e.binary(value.Int(1), "+", e.unary("sqrt", value.Int(5))), "/", value.Int(2))
+}
+
+func Sprint(val value.Value) string {
+	return val.Sprint(ivyCfg)
 }
 
 // SetFormat sets the ivy output format
@@ -41,7 +45,7 @@ func ParseNum(tok string) (val value.Value, err error) {
 			err = ErrInvalidArg
 		}
 	}()
-	return value.Parse(tok)
+	return value.Parse(ivyCfg, tok)
 }
 
 // Stack represents a stack of floating point numbers.

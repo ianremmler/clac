@@ -216,7 +216,7 @@ func printCmdLineStack(stack clac.Stack) {
 		if err != nil {
 			fmt.Print("error")
 		} else {
-			fmt.Print(val)
+			fmt.Print(clac.Sprint(val))
 		}
 		if i < len(stack)-1 {
 			fmt.Print(" ")
@@ -299,10 +299,10 @@ func printStack(stack clac.Stack) {
 		line := fmt.Sprintf("%02d:", i)
 		if i < len(stack) {
 			clac.SetFormat(floatFmt)
-			line += fmt.Sprintf(fmt.Sprintf(" %%%ds", floatCols), stack[i])
+			line += fmt.Sprintf(fmt.Sprintf(" %%%ds", floatCols), clac.Sprint(stack[i]))
 			if val, err := clac.Trunc(stack[i]); err == nil {
 				clac.SetFormat(hexFmt)
-				hexStr := fmt.Sprintf(fmt.Sprintf(" %%%ds", hexCols-1), val)
+				hexStr := fmt.Sprintf(fmt.Sprintf(" %%%ds", hexCols-1), clac.Sprint(val))
 				if len(hexStr) > hexCols {
 					hexStr = hexStr[:hexCols-1] + "…"
 				}
