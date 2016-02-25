@@ -254,15 +254,10 @@ func help() {
 }
 
 func parseInput(input string, errorHandler func(err error)) {
-	cmdReader := strings.NewReader(input)
-	for {
-		tok := ""
-		if _, err := fmt.Fscan(cmdReader, &tok); err != nil {
-			if err != io.EOF {
-				errorHandler(err)
-			}
-			break
-		}
+	scanner := bufio.NewScanner(strings.NewReader(input))
+	scanner.Split(bufio.ScanWords)
+	for scanner.Scan() {
+		tok := scanner.Text()
 		if num, err := clac.ParseNum(tok); err == nil {
 			if err = cl.Exec(func() error { return cl.Push(num) }); err != nil {
 				errorHandler(fmt.Errorf("push: %s", err))
@@ -276,6 +271,9 @@ func parseInput(input string, errorHandler func(err error)) {
 			continue
 		}
 		errorHandler(fmt.Errorf("%s: invalid input", tok))
+	}
+	if err := scanner.Err(); err != nil {
+		errorHandler(err)
 	}
 }
 
