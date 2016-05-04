@@ -408,7 +408,7 @@ func atan2(x, y value.Value) (value.Value, error) {
 	e := &eval{}
 
 	// special cases
-	tan := value.Value(zero)
+	tan := zero
 	if isTrue(e.binary(y, "==", zero)) {
 		if isTrue(e.binary(x, "<", zero)) {
 			tan = Pi
