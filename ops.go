@@ -46,7 +46,7 @@ func (c *Clac) Drop() error {
 	return c.drop(0, 1)
 }
 
-// Dropn drops the last x stack values.
+// DropN drops the last x stack values.
 func (c *Clac) DropN() error {
 	num, err := c.popCount()
 	if err != nil {
@@ -55,7 +55,7 @@ func (c *Clac) DropN() error {
 	return c.drop(0, num)
 }
 
-// Dropr drops a range of x stack values, starting at index y.
+// DropR drops a range of x stack values, starting at index y.
 func (c *Clac) DropR() error {
 	num, err := c.popCount()
 	if err != nil {
