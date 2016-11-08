@@ -307,13 +307,14 @@ func printStack(stack clac.Stack) {
 				line += hexStr
 			}
 		}
-		fmt.Println(line)
+		fmt.Println(line + "\r")
 	}
 	if lastErr == nil {
 		fmt.Println(strings.Repeat("-", cols))
 	} else {
 		fmt.Println("Error:", lastErr)
 	}
+	fmt.Print("\r")
 }
 
 func clearScreen() {
