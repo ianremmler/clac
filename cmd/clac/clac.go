@@ -227,7 +227,9 @@ func printCmdLineStack(stack clac.Stack) {
 
 func exit() {
 	fmt.Println()
-	terminal.Restore(syscall.Stdin, oldTrmState)
+	if !isCli {
+		terminal.Restore(syscall.Stdin, oldTrmState)
+	}
 	os.Exit(0)
 }
 
