@@ -29,6 +29,7 @@ func init() {
 	Phi = e.binary(e.binary(value.Int(1), "+", e.unary("sqrt", value.Int(5))), "/", value.Int(2))
 }
 
+// Sprint returns a stringified value
 func Sprint(val value.Value) string {
 	return val.Sprint(ivyCfg)
 }
@@ -87,15 +88,24 @@ func (s *stackHist) stack() Stack {
 
 // Clac represents an RPN calculator.
 type Clac struct {
-	working Stack
-	hist    *stackHist
+	working  Stack
+	keepHist bool
+	hist     *stackHist
 }
 
 // New returns an initialized Clac instance.
 func New() *Clac {
-	c := &Clac{}
+	c := &Clac{keepHist: true}
 	c.Reset()
 	return c
+}
+
+// EnableHistory sets whether to retain history
+func (c *Clac) EnableHistory(enable bool) {
+	c.keepHist = enable
+	if !enable {
+		c.hist = newStackHist()
+	}
 }
 
 // Reset resets clac to its initial state
@@ -112,12 +122,16 @@ func (c *Clac) Stack() Stack {
 
 // Exec executes a clac command, along with necessary bookkeeping
 func (c *Clac) Exec(f func() error) error {
-	c.updateWorking()
-	err := f()
-	if err == nil {
-		c.hist.push(c.working)
+	if c.keepHist {
+		c.updateWorking()
 	}
-	c.updateWorking()
+	err := f()
+	if c.keepHist {
+		if err == nil {
+			c.hist.push(c.working)
+		}
+		c.updateWorking()
+	}
 	if err == ErrNoHistUpdate {
 		return nil
 	}

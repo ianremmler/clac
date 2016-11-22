@@ -27,11 +27,9 @@ Command line mode requires input from arguments (without -i) and/or stdin.
 
 var (
 	// flags
-	doInitStack        = false
-	doHexOut           = false
-	isInteractive      = false
-	isCli              = false
-	cliPrec       uint = 12
+	doInitStack      = false
+	doHexOut         = false
+	cliPrec     uint = 12
 
 	trm         *terminal.Terminal
 	oldTrmState *terminal.State
@@ -85,7 +83,6 @@ var cmdMap = map[string]func() error{
 	"xorn":   cl.XorN,
 	"sum":    cl.Sum,
 	"avg":    cl.Avg,
-	"clear":  cl.Clear,
 	"drop":   cl.Drop,
 	"dropn":  cl.DropN,
 	"dropr":  cl.DropR,
@@ -95,8 +92,6 @@ var cmdMap = map[string]func() error{
 	"pick":   cl.Pick,
 	"swap":   cl.Swap,
 	"depth":  cl.Depth,
-	"undo":   cl.Undo,
-	"redo":   cl.Redo,
 	"min":    cl.Min,
 	"max":    cl.Max,
 	"minn":   cl.MinN,
@@ -113,9 +108,15 @@ var cmdMap = map[string]func() error{
 	"pi":     func() error { return cl.Push(clac.Pi) },
 	"e":      func() error { return cl.Push(clac.E) },
 	"phi":    func() error { return cl.Push(clac.Phi) },
-	"reset":  func() error { return cl.Reset() },
-	"quit":   func() error { exit(); return nil },
-	"help":   func() error { help(); return clac.ErrNoHistUpdate },
+}
+
+var interactiveCmdMap = map[string]func() error{
+	"undo":  cl.Undo,
+	"redo":  cl.Redo,
+	"clear": cl.Clear,
+	"reset": func() error { return cl.Reset() },
+	"help":  func() error { help(); return clac.ErrNoHistUpdate },
+	"quit":  func() error { exit(); return nil },
 }
 
 type term struct {
@@ -126,10 +127,6 @@ type term struct {
 func init() {
 	log.SetFlags(0)
 	log.SetPrefix("clac: ")
-	for cmd := range cmdMap {
-		cmdList = append(cmdList, cmd)
-	}
-	sort.Strings(cmdList)
 	flag.BoolVar(&doHexOut, "x", doHexOut,
 		"Command line mode: hexidecimal output")
 	flag.UintVar(&cliPrec, "p", cliPrec,
@@ -144,11 +141,24 @@ func init() {
 
 func main() {
 	flag.Parse()
-	processCmdLine()
-	if isCli {
+	if !processCmdLine() {
 		printCmdLineStack(cl.Stack())
 		os.Exit(0)
 	}
+
+	interactiveSetup()
+
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, os.Interrupt)
+	go func() {
+		<-sigChan
+		exit()
+	}()
+
+	repl()
+}
+
+func interactiveSetup() {
 	if !terminal.IsTerminal(syscall.Stdin) {
 		log.Fatalln("this doesn't look like an interactive terminal")
 	}
@@ -158,14 +168,14 @@ func main() {
 		log.Fatalln(err)
 	}
 	trm = terminal.NewTerminal(term{os.Stdin, os.Stdout}, "")
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, os.Interrupt)
-	go func() {
-		<-sigChan
-		exit()
-	}()
 
-	repl()
+	for cmd, fn := range interactiveCmdMap {
+		cmdMap[cmd] = fn
+	}
+	for cmd := range cmdMap {
+		cmdList = append(cmdList, cmd)
+	}
+	sort.Strings(cmdList)
 }
 
 func repl() {
@@ -179,11 +189,11 @@ func repl() {
 		if err != nil {
 			continue
 		}
-		parseInput(input, func(err error) { lastErr = err })
+		processInput(input, true)
 	}
 }
 
-func processCmdLine() {
+func processCmdLine() bool {
 	input := ""
 	if stat, err := os.Stdin.Stat(); err == nil && stat.Mode()&os.ModeNamedPipe != 0 {
 		if pipeInput, err := ioutil.ReadAll(os.Stdin); err == nil {
@@ -193,12 +203,12 @@ func processCmdLine() {
 	if len(flag.Args()) > 0 {
 		input += " " + strings.Join(flag.Args(), " ")
 	}
-	if input != "" {
-		isCli = !doInitStack
-		isInteractive = false
-		parseInput(string(input), func(err error) { log.Println(err) })
+	isInteractive := doInitStack || (input == "")
+	if isInteractive {
+		cl.EnableHistory(isInteractive)
 	}
-	isInteractive = !isCli
+	processInput(string(input), false)
+	return isInteractive
 }
 
 func printCmdLineStack(stack clac.Stack) {
@@ -226,36 +236,31 @@ func printCmdLineStack(stack clac.Stack) {
 }
 
 func exit() {
+	terminal.Restore(syscall.Stdin, oldTrmState)
 	fmt.Println()
-	if !isCli {
-		terminal.Restore(syscall.Stdin, oldTrmState)
-	}
 	os.Exit(0)
 }
 
 func help() {
-	if !isCli && !isInteractive {
-		return
-	}
-	if isInteractive {
-		clearScreen()
-	}
+	clearScreen()
 	for i := range cmdList {
 		fmt.Printf("%-8s", cmdList[i])
 		if (i+1)%5 == 0 {
-			fmt.Println()
+			fmt.Println("\r")
 		}
 	}
 	if len(cmdList)%5 != 0 {
-		fmt.Println()
+		fmt.Println("\r")
 	}
-	if isInteractive {
-		fmt.Print("\n[Press any key to continue]")
-		waitKey()
-	}
+	fmt.Print("\n[Press any key to continue]")
+	waitKey()
 }
 
-func parseInput(input string, errorHandler func(err error)) {
+func processInput(input string, isInteractive bool) {
+	errorHandler := func(err error) { lastErr = err }
+	if !isInteractive {
+		errorHandler = func(err error) { log.Println(err) }
+	}
 	scanner := bufio.NewScanner(strings.NewReader(input))
 	scanner.Split(bufio.ScanWords)
 	for scanner.Scan() {
