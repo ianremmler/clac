@@ -15,6 +15,7 @@ import (
 
 	"github.com/ianremmler/clac"
 	"golang.org/x/crypto/ssh/terminal"
+	"robpike.io/ivy/value"
 )
 
 const usageStr = `usage:
@@ -40,14 +41,18 @@ var (
 
 var cmdMap = map[string]func() error{
 	"neg":    cl.Neg,
+	"n":      cl.Neg,
 	"abs":    cl.Abs,
+	"a":      cl.Abs,
 	"inv":    cl.Inv,
+	"i":      cl.Inv,
 	"+":      cl.Add,
 	"-":      cl.Sub,
 	"*":      cl.Mul,
+	"x":      cl.Mul,
 	"/":      cl.Div,
 	"div":    cl.IntDiv,
-	"mod":    cl.Mod,
+	"%":      cl.Mod,
 	"exp":    cl.Exp,
 	"^":      cl.Pow,
 	"2^":     cl.Pow2,
@@ -84,19 +89,24 @@ var cmdMap = map[string]func() error{
 	"sum":    cl.Sum,
 	"avg":    cl.Avg,
 	"drop":   cl.Drop,
+	"k":      cl.Drop,
 	"dropn":  cl.DropN,
 	"dropr":  cl.DropR,
 	"dup":    cl.Dup,
+	"d":      cl.Dup,
 	"dupn":   cl.DupN,
 	"dupr":   cl.DupR,
 	"pick":   cl.Pick,
+	"p":      cl.Pick,
 	"swap":   cl.Swap,
+	"s":      cl.Swap,
 	"depth":  cl.Depth,
 	"min":    cl.Min,
 	"max":    cl.Max,
 	"minn":   cl.MinN,
 	"maxn":   cl.MaxN,
 	"rot":    cl.Rot,
+	"r":      cl.Rot,
 	"rotr":   cl.RotR,
 	"unrot":  cl.Unrot,
 	"unrotr": cl.UnrotR,
@@ -105,18 +115,20 @@ var cmdMap = map[string]func() error{
 	"dot":    cl.Dot,
 	"dot3":   cl.Dot3,
 	"cross":  cl.Cross,
-	"pi":     func() error { return cl.Push(clac.Pi) },
-	"e":      func() error { return cl.Push(clac.E) },
-	"phi":    func() error { return cl.Push(clac.Phi) },
+	"pi":     constant(clac.Pi),
+	"e":      constant(clac.E),
+	"phi":    constant(clac.Phi),
 }
 
 var interactiveCmdMap = map[string]func() error{
 	"undo":  cl.Undo,
+	"u":     cl.Undo,
 	"redo":  cl.Redo,
+	"r":     cl.Redo,
 	"clear": cl.Clear,
-	"reset": func() error { return cl.Reset() },
-	"help":  func() error { help(); return clac.ErrNoHistUpdate },
-	"quit":  func() error { exit(); return nil },
+	"reset": cl.Reset,
+	"help":  help,
+	"quit":  exit,
 }
 
 type term struct {
@@ -156,6 +168,10 @@ func main() {
 	}()
 
 	repl()
+}
+
+func constant(v value.Value) func() error {
+	return func() error { return cl.Push(v) }
 }
 
 func interactiveSetup() {
@@ -235,13 +251,14 @@ func printCmdLineStack(stack clac.Stack) {
 	fmt.Println()
 }
 
-func exit() {
+func exit() error {
 	terminal.Restore(syscall.Stdin, oldTrmState)
 	fmt.Println()
 	os.Exit(0)
+	return nil
 }
 
-func help() {
+func help() error {
 	clearScreen()
 	for i := range cmdList {
 		fmt.Printf("%-8s", cmdList[i])
@@ -254,6 +271,7 @@ func help() {
 	}
 	fmt.Print("\n[Press any key to continue]")
 	waitKey()
+	return clac.ErrNoHistUpdate
 }
 
 func processInput(input string, isInteractive bool) {
