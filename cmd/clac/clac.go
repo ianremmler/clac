@@ -9,7 +9,6 @@ import (
 	"log"
 	"os"
 	"os/signal"
-	"sort"
 	"strings"
 	"syscall"
 
@@ -36,7 +35,6 @@ var (
 	oldTrmState *terminal.State
 	lastErr     error
 	cl          = clac.New()
-	cmdList     = []string{}
 )
 
 var cmdMap = map[string]func() error{
@@ -125,9 +123,10 @@ var interactiveCmdMap = map[string]func() error{
 	"redo":  cl.Redo,
 	"r":     cl.Redo,
 	"clear": cl.Clear,
+	"c":     cl.Clear,
 	"reset": cl.Reset,
-	"help":  help,
 	"quit":  exit,
+	"q":     exit,
 }
 
 type term struct {
@@ -187,10 +186,7 @@ func interactiveSetup() {
 	for cmd, fn := range interactiveCmdMap {
 		cmdMap[cmd] = fn
 	}
-	for cmd := range cmdMap {
-		cmdList = append(cmdList, cmd)
-	}
-	sort.Strings(cmdList)
+	interactiveCmdMap = nil
 }
 
 func repl() {
@@ -219,9 +215,7 @@ func processCmdLine() bool {
 		input += " " + strings.Join(flag.Args(), " ")
 	}
 	isInteractive := doInitStack || (input == "")
-	if isInteractive {
-		cl.EnableHistory(isInteractive)
-	}
+	cl.EnableHistory(isInteractive)
 	processInput(string(input), false)
 	return isInteractive
 }
@@ -255,22 +249,6 @@ func exit() error {
 	fmt.Println()
 	os.Exit(0)
 	return nil
-}
-
-func help() error {
-	clearScreen()
-	for i := range cmdList {
-		fmt.Printf("%-8s", cmdList[i])
-		if (i+1)%5 == 0 {
-			fmt.Println("\r")
-		}
-	}
-	if len(cmdList)%5 != 0 {
-		fmt.Println("\r")
-	}
-	fmt.Print("\n[Press any key to continue]")
-	waitKey()
-	return clac.ErrNoHistUpdate
 }
 
 func processInput(input string, isInteractive bool) {
