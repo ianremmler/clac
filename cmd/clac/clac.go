@@ -106,7 +106,6 @@ var cmdMap = map[string]func() error{
 	"minn":   cl.MinN,
 	"maxn":   cl.MaxN,
 	"rot":    cl.Rot,
-	"r":      cl.Rot,
 	"rotr":   cl.RotR,
 	"unrot":  cl.Unrot,
 	"unrotr": cl.UnrotR,
