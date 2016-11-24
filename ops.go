@@ -327,10 +327,10 @@ func (c *Clac) Pow10() error {
 	})
 }
 
-// LogN returns the base y log of x.
+// LogN returns the base x log of y.
 func (c *Clac) LogN() error {
 	return c.applyFloat(2, func(vals []value.Value) (value.Value, error) {
-		return binary(vals[1], "log", vals[0])
+		return binary(vals[0], "log", vals[1])
 	})
 }
 
