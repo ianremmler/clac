@@ -117,7 +117,7 @@ var cmdMap = map[string]func() error{
 	"phi":    constant(clac.Phi),
 }
 
-var interactiveCmdMap = map[string]func() error{
+var tuiCmdMap = map[string]func() error{
 	"undo":  cl.Undo,
 	"u":     cl.Undo,
 	"redo":  cl.Redo,
@@ -151,12 +151,16 @@ func init() {
 
 func main() {
 	flag.Parse()
-	if !processCmdLine() {
+	isTUI, lastErr := processCmdLine()
+	if !isTUI {
 		printCmdLineStack(cl.Stack())
+		if lastErr != nil {
+			log.Fatal(lastErr)
+		}
 		os.Exit(0)
 	}
 
-	interactiveSetup()
+	tuiSetup()
 
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt)
@@ -172,7 +176,7 @@ func constant(v value.Value) func() error {
 	return func() error { return cl.Push(v) }
 }
 
-func interactiveSetup() {
+func tuiSetup() {
 	if !terminal.IsTerminal(syscall.Stdin) {
 		log.Fatalln("this doesn't look like an interactive terminal")
 	}
@@ -183,28 +187,29 @@ func interactiveSetup() {
 	}
 	trm = terminal.NewTerminal(term{os.Stdin, os.Stdout}, "")
 
-	for cmd, fn := range interactiveCmdMap {
+	for cmd, fn := range tuiCmdMap {
 		cmdMap[cmd] = fn
 	}
-	interactiveCmdMap = nil
+	tuiCmdMap = nil
 }
 
 func repl() {
 	for {
 		printStack(cl.Stack())
 		input, err := trm.ReadLine()
-		lastErr = nil
-		if err == io.EOF {
+
+		switch err {
+		case io.EOF:
 			exit()
+		case nil:
+			lastErr = processInput(input)
+		default:
+			lastErr = err
 		}
-		if err != nil {
-			continue
-		}
-		processInput(input, true)
 	}
 }
 
-func processCmdLine() bool {
+func processCmdLine() (bool, error) {
 	input := ""
 	if stat, err := os.Stdin.Stat(); err == nil && stat.Mode()&os.ModeNamedPipe != 0 {
 		if pipeInput, err := ioutil.ReadAll(os.Stdin); err == nil {
@@ -214,10 +219,10 @@ func processCmdLine() bool {
 	if len(flag.Args()) > 0 {
 		input += " " + strings.Join(flag.Args(), " ")
 	}
-	isInteractive := doInitStack || (input == "")
-	cl.EnableHistory(isInteractive)
-	processInput(string(input), false)
-	return isInteractive
+	isTUI := doInitStack || (input == "")
+	cl.EnableHistory(isTUI)
+	err := processInput(string(input))
+	return isTUI, err
 }
 
 func printCmdLineStack(stack clac.Stack) {
@@ -251,32 +256,29 @@ func exit() error {
 	return nil
 }
 
-func processInput(input string, isInteractive bool) {
-	errorHandler := func(err error) { lastErr = err }
-	if !isInteractive {
-		errorHandler = func(err error) { log.Println(err) }
-	}
+func processInput(input string) error {
 	scanner := bufio.NewScanner(strings.NewReader(input))
 	scanner.Split(bufio.ScanWords)
 	for scanner.Scan() {
 		tok := scanner.Text()
 		if num, err := clac.ParseNum(tok); err == nil {
 			if err = cl.Exec(func() error { return cl.Push(num) }); err != nil {
-				errorHandler(fmt.Errorf("push: %s", err))
+				return fmt.Errorf("push: %s", err)
 			}
 			continue
 		}
 		if cmd, ok := cmdMap[tok]; ok {
 			if err := cl.Exec(cmd); err != nil {
-				errorHandler(fmt.Errorf("%s: %s", tok, err))
+				return fmt.Errorf("%s: %s", tok, err)
 			}
 			continue
 		}
-		errorHandler(fmt.Errorf("%s: invalid input", tok))
+		return fmt.Errorf("%s: invalid input", tok)
 	}
 	if err := scanner.Err(); err != nil {
-		errorHandler(err)
+		return err
 	}
+	return nil
 }
 
 func printStack(stack clac.Stack) {
@@ -311,11 +313,11 @@ func printStack(stack clac.Stack) {
 		}
 		fmt.Println(line + "\r")
 	}
-	if lastErr == nil {
-		fmt.Println(strings.Repeat("-", cols))
-	} else {
-		fmt.Println("Error:", lastErr)
+	info := ""
+	if lastErr != nil {
+		info = fmt.Sprintf("[ %s ]", lastErr)
 	}
+	fmt.Println(info + strings.Repeat("-", cols-len(info)))
 	fmt.Print("\r")
 }
 
