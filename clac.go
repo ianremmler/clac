@@ -81,6 +81,10 @@ func (s *stackHist) push(stack Stack) {
 	s.cur++
 }
 
+func (s *stackHist) replace(stack Stack) {
+	s.hist[s.cur] = stack
+}
+
 func (s *stackHist) stack() Stack {
 	return s.hist[s.cur]
 }
@@ -121,16 +125,16 @@ func (c *Clac) Stack() Stack {
 
 // Exec executes a clac command, along with necessary bookkeeping
 func (c *Clac) Exec(f func() error) error {
-	if c.keepHist {
-		c.updateWorking()
-	}
+	c.updateWorking()
 	err := f()
-	if c.keepHist {
-		if err == nil {
+	if err == nil {
+		if c.keepHist {
 			c.hist.push(c.working)
+		} else {
+			c.hist.replace(c.working)
 		}
-		c.updateWorking()
 	}
+	c.updateWorking()
 	if err == ErrNoHistUpdate {
 		return nil
 	}
