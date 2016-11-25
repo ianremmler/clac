@@ -273,7 +273,7 @@ func processInput(input string) error {
 			}
 			continue
 		}
-		return fmt.Errorf("%s: invalid input", tok)
+		return fmt.Errorf("invalid input: \"%s\"", tok)
 	}
 	if err := scanner.Err(); err != nil {
 		return err

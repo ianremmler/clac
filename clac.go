@@ -15,7 +15,6 @@ var (
 
 	ErrTooFewArgs    = errors.New("too few arguments")
 	ErrInvalidArg    = errors.New("invalid argument")
-	ErrOutOfRange    = errors.New("argument out of range")
 	ErrNoMoreChanges = errors.New("no more changes")
 	ErrNoHistUpdate  = errors.New("") // for cmds that don't add to history
 
@@ -149,10 +148,10 @@ func (c *Clac) checkRange(pos, num int, isEndOK bool) (int, int, error) {
 	}
 	start, end := pos, pos+num-1
 	if start < 0 || start > end {
-		return 0, 0, ErrOutOfRange
+		return 0, 0, ErrInvalidArg
 	}
 	if start >= max || end >= max {
-		return 0, 0, ErrOutOfRange
+		return 0, 0, ErrTooFewArgs
 	}
 	return start, end, nil
 }
@@ -183,7 +182,7 @@ func (c *Clac) remove(pos, num int) ([]value.Value, error) {
 func (c *Clac) pop() (value.Value, error) {
 	x, err := c.remove(0, 1)
 	if err != nil {
-		return zero, ErrTooFewArgs
+		return zero, err
 	}
 	return x[0], err
 }
@@ -209,7 +208,7 @@ func (c *Clac) popIntMin(min int) (int, error) {
 		return 0, err
 	}
 	if n < min {
-		return 0, ErrOutOfRange
+		return 0, ErrInvalidArg
 	}
 	return n, nil
 }
