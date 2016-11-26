@@ -2,13 +2,14 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"flag"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
 	"os"
-	"os/signal"
+	"os/exec"
 	"strings"
 	"syscall"
 
@@ -17,24 +18,23 @@ import (
 	"robpike.io/ivy/value"
 )
 
-const usageStr = `usage:
+type runMode int
 
-Interactive:  clac [-i <input>]
-Command line: clac [-x | -p <precision>] <input>
-
-Command line mode requires input from arguments (without -i) and/or stdin.
-`
+const (
+	cliMode runMode = iota
+	tuiMode
+	dmenuMode
+)
 
 var (
 	// flags
+	doDmenu          = false
 	doInitStack      = false
 	doHexOut         = false
 	cliPrec     uint = 12
 
-	trm         *terminal.Terminal
-	oldTrmState *terminal.State
-	lastErr     error
-	cl          = clac.New()
+	cl      = clac.New()
+	lastErr error
 )
 
 var cmdMap = map[string]func() error{
@@ -117,7 +117,7 @@ var cmdMap = map[string]func() error{
 	"phi":    constant(clac.Phi),
 }
 
-var tuiCmdMap = map[string]func() error{
+var uiCmdMap = map[string]func() error{
 	"undo":  cl.Undo,
 	"u":     cl.Undo,
 	"redo":  cl.Redo,
@@ -125,8 +125,8 @@ var tuiCmdMap = map[string]func() error{
 	"clear": cl.Clear,
 	"c":     cl.Clear,
 	"reset": cl.Reset,
-	"quit":  exit,
-	"q":     exit,
+	"quit":  quit,
+	"q":     quit,
 }
 
 type term struct {
@@ -137,79 +137,89 @@ type term struct {
 func init() {
 	log.SetFlags(0)
 	log.SetPrefix("clac: ")
-	flag.BoolVar(&doHexOut, "x", doHexOut,
-		"Command line mode: hexidecimal output")
-	flag.UintVar(&cliPrec, "p", cliPrec,
-		"Command line mode: output precision")
-	flag.BoolVar(&doInitStack, "i", doInitStack,
-		"Initialize with input from command line arguments")
-	flag.Usage = func() {
-		fmt.Fprintln(os.Stderr, usageStr)
-		flag.PrintDefaults()
-	}
+	flag.BoolVar(&doDmenu, "d", doDmenu, "dmenu mode")
+	flag.BoolVar(&doHexOut, "x", doHexOut, "hexidecimal output")
+	flag.UintVar(&cliPrec, "p", cliPrec, "output precision")
+	flag.BoolVar(&doInitStack, "i", doInitStack, "initialize stack")
 }
 
 func main() {
 	flag.Parse()
-	isTUI, lastErr := processCmdLine()
-	if !isTUI {
-		printCmdLineStack(cl.Stack())
-		if lastErr != nil {
-			log.Fatal(lastErr)
-		}
-		os.Exit(0)
+	var mode runMode
+	mode, lastErr = processCmdLine()
+	switch mode {
+	case cliMode:
+		cliRun()
+	case tuiMode:
+		tuiRun()
+	case dmenuMode:
+		dmenuRun()
 	}
-
-	tuiSetup()
-
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, os.Interrupt)
-	go func() {
-		<-sigChan
-		exit()
-	}()
-
-	repl()
 }
 
 func constant(v value.Value) func() error {
 	return func() error { return cl.Push(v) }
 }
 
-func tuiSetup() {
+func cliRun() {
+	fmt.Println(stackStr(cl.Stack()))
+	if lastErr != nil {
+		log.Fatal(lastErr)
+	}
+}
+
+func uiSetup() {
+	for cmd, fn := range uiCmdMap {
+		cmdMap[cmd] = fn
+	}
+	uiCmdMap = nil
+}
+
+func tuiRun() {
+	uiSetup()
 	if !terminal.IsTerminal(syscall.Stdin) {
 		log.Fatalln("this doesn't look like an interactive terminal")
 	}
-	var err error
-	oldTrmState, err = terminal.MakeRaw(syscall.Stdin)
+	oldTrmState, err := terminal.MakeRaw(syscall.Stdin)
 	if err != nil {
 		log.Fatalln(err)
 	}
-	trm = terminal.NewTerminal(term{os.Stdin, os.Stdout}, "")
-
-	for cmd, fn := range tuiCmdMap {
-		cmdMap[cmd] = fn
+	trm := terminal.NewTerminal(term{os.Stdin, os.Stdout}, "")
+	for lastErr != io.EOF {
+		tuiPrintStack(cl.Stack())
+		var input string
+		input, lastErr = trm.ReadLine()
+		if lastErr == nil {
+			lastErr = processInput(input)
+		}
 	}
-	tuiCmdMap = nil
+	terminal.Restore(syscall.Stdin, oldTrmState)
 }
 
-func repl() {
-	for {
-		printStack(cl.Stack())
-		input, err := trm.ReadLine()
+func dmenuSetup() {
+	uiSetup()
+	cmdMap["hex"] = func() error { doHexOut = true; return nil }
+	cmdMap["dec"] = func() error { doHexOut = false; return nil }
+}
 
-		switch err {
-		case io.EOF:
-			exit()
-		case nil:
-			lastErr = processInput(input)
-		default:
-			lastErr = err
+func dmenuRun() {
+	dmenuSetup()
+	var outBuf, errBuf bytes.Buffer
+	for {
+		outBuf.Reset()
+		errBuf.Reset()
+		cmd := exec.Command("dmenu", "-p", stackStr(cl.Stack()))
+		cmd.Stdout, cmd.Stderr = &outBuf, &errBuf
+		if err := cmd.Run(); err != nil {
+			return
+		}
+		if err := processInput(outBuf.String()); err != nil {
+			exec.Command("dmenu", "-p", err.Error()).Run()
 		}
 	}
 }
 
-func processCmdLine() (bool, error) {
+func processCmdLine() (runMode, error) {
 	input := ""
 	if stat, err := os.Stdin.Stat(); err == nil && stat.Mode()&os.ModeNamedPipe != 0 {
 		if pipeInput, err := ioutil.ReadAll(os.Stdin); err == nil {
@@ -219,13 +229,20 @@ func processCmdLine() (bool, error) {
 	if len(flag.Args()) > 0 {
 		input += " " + strings.Join(flag.Args(), " ")
 	}
-	isTUI := doInitStack || (input == "")
-	cl.EnableHistory(isTUI)
+	mode := cliMode
+	switch {
+	case doDmenu:
+		mode = dmenuMode
+	case doInitStack || input == "":
+		mode = tuiMode
+	}
+	cl.EnableHistory(mode != cliMode)
 	err := processInput(string(input))
-	return isTUI, err
+	return mode, err
 }
 
-func printCmdLineStack(stack clac.Stack) {
+func stackStr(stack clac.Stack) string {
+	out := ""
 	if doHexOut {
 		clac.SetFormat("%#x")
 	} else {
@@ -238,20 +255,18 @@ func printCmdLineStack(stack clac.Stack) {
 			val, err = clac.Trunc(val)
 		}
 		if err != nil {
-			fmt.Print("error")
+			out += err.Error()
 		} else {
-			fmt.Print(clac.Sprint(val))
+			out += clac.Sprint(val)
 		}
 		if i < len(stack)-1 {
-			fmt.Print(" ")
+			out += " "
 		}
 	}
-	fmt.Println()
+	return out
 }
 
-func exit() error {
-	terminal.Restore(syscall.Stdin, oldTrmState)
-	fmt.Println()
+func quit() error {
 	os.Exit(0)
 	return nil
 }
@@ -281,7 +296,7 @@ func processInput(input string) error {
 	return nil
 }
 
-func printStack(stack clac.Stack) {
+func tuiPrintStack(stack clac.Stack) {
 	cols, rows, err := terminal.GetSize(syscall.Stdout)
 	if err != nil {
 		rows = len(stack) + 1
@@ -323,8 +338,4 @@ func printStack(stack clac.Stack) {
 
 func clearScreen() {
 	fmt.Print("\033[2J\033[H")
-}
-
-func waitKey() {
-	bufio.NewReader(os.Stdin).ReadByte()
 }
