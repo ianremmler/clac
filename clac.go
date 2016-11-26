@@ -125,7 +125,6 @@ func (c *Clac) Stack() Stack {
 
 // Exec executes a clac command, along with necessary bookkeeping
 func (c *Clac) Exec(f func() error) error {
-	c.updateWorking()
 	err := f()
 	if err == nil {
 		if c.keepHist {
