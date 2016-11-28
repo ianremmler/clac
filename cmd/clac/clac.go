@@ -208,13 +208,17 @@ func dmenuRun() {
 	for {
 		outBuf.Reset()
 		errBuf.Reset()
-		cmd := exec.Command("dmenu", "-p", stackStr(cl.Stack()))
+		stack := stackStr(cl.Stack())
+		if len(stack) > 0 {
+			stack = " " + stack
+		}
+		cmd := exec.Command("dmenu", "-p", "clac:"+stack)
 		cmd.Stdout, cmd.Stderr = &outBuf, &errBuf
 		if err := cmd.Run(); err != nil {
 			return
 		}
 		if err := processInput(outBuf.String()); err != nil {
-			exec.Command("dmenu", "-p", err.Error()).Run()
+			exec.Command("dmenu", "-p", "clac: "+err.Error()).Run()
 		}
 	}
 }
