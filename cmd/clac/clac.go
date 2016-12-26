@@ -2,7 +2,6 @@ package main
 
 import (
 	"bufio"
-	"bytes"
 	"flag"
 	"fmt"
 	"io"
@@ -204,20 +203,16 @@ func dmenuSetup() {
 
 func dmenuRun() {
 	dmenuSetup()
-	var outBuf, errBuf bytes.Buffer
 	for {
-		outBuf.Reset()
-		errBuf.Reset()
 		stack := stackStr(cl.Stack())
 		if len(stack) > 0 {
 			stack = " " + stack
 		}
-		cmd := exec.Command("dmenu", "-p", "clac:"+stack)
-		cmd.Stdout, cmd.Stderr = &outBuf, &errBuf
-		if err := cmd.Run(); err != nil {
+		out, err := exec.Command("dmenu", "-p", "clac:"+stack).Output()
+		if err != nil {
 			return
 		}
-		if err := processInput(outBuf.String()); err != nil {
+		if err := processInput(string(out)); err != nil {
 			exec.Command("dmenu", "-p", "clac: "+err.Error()).Run()
 		}
 	}
