@@ -168,7 +168,8 @@ func (c *Clac) insert(vals []value.Value, pos int) error {
 	return nil
 }
 
-func (c *Clac) push(x value.Value) error {
+// Push pushes a value on the stack.
+func (c *Clac) Push(x value.Value) error {
 	return c.insert([]value.Value{x}, 0)
 }
 
@@ -182,7 +183,8 @@ func (c *Clac) remove(pos, num int) ([]value.Value, error) {
 	return vals, nil
 }
 
-func (c *Clac) pop() (value.Value, error) {
+// Pop pops a value off the stack.
+func (c *Clac) Pop() (value.Value, error) {
 	x, err := c.remove(0, 1)
 	if err != nil {
 		return zero, err
@@ -202,7 +204,7 @@ func Trunc(val value.Value) (value.Value, error) {
 }
 
 func (c *Clac) popIntMin(min int) (int, error) {
-	val, err := c.pop()
+	val, err := c.Pop()
 	if err != nil {
 		return 0, err
 	}

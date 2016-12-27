@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -199,6 +200,7 @@ func dmenuSetup() {
 	uiSetup()
 	cmdMap["hex"] = func() error { doHexOut = true; return nil }
 	cmdMap["dec"] = func() error { doHexOut = false; return nil }
+	cmdMap["conv"] = dmenuConv
 }
 
 func dmenuRun() {
@@ -216,6 +218,37 @@ func dmenuRun() {
 			exec.Command("dmenu", "-p", "clac: "+err.Error()).Run()
 		}
 	}
+}
+
+func dmenuConv() error {
+	val, err := cl.Pop()
+	if err != nil {
+		return err
+	}
+	valStr := stackStr(clac.Stack{val})
+	have, err := exec.Command("dmenu", "-p", "clac: conv: have: "+valStr).Output()
+	if err != nil {
+		return errors.New("abort")
+	}
+	want, err := exec.Command("dmenu", "-p", "clac: conv: want:").Output()
+	if err != nil {
+		return errors.New("abort")
+	}
+	haveStr := valStr + " " + strings.TrimSpace(string(have))
+	wantStr := strings.TrimSpace(string(want))
+	out, err := exec.Command("units", "-t", haveStr, wantStr).Output()
+	if err != nil {
+		errStr := strings.SplitN(string(out), "\n", 2)[0]
+		if errStr != "" {
+			return errors.New(errStr)
+		}
+		return err
+	}
+	num, err := clac.ParseNum(strings.TrimSpace(string(out)))
+	if err != nil {
+		return err
+	}
+	return cl.Push(num)
 }
 
 func processCmdLine() (runMode, error) {

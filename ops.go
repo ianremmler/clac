@@ -33,11 +33,6 @@ func (c *Clac) Clear() error {
 	return nil
 }
 
-// Push pushes a value on the stack.
-func (c *Clac) Push(a value.Value) error {
-	return c.push(a)
-}
-
 // Drop drops the last stack value.
 func (c *Clac) Drop() error {
 	return c.drop(0, 1)
@@ -148,7 +143,7 @@ func (c *Clac) Swap() error {
 
 // Depth returns the number of stack values
 func (c *Clac) Depth() error {
-	return c.push(value.Int(len(c.Stack())))
+	return c.Push(value.Int(len(c.Stack())))
 }
 
 type floatFunc func(vals []value.Value) (value.Value, error)
@@ -170,7 +165,7 @@ func (c *Clac) applyFloat(arity int, f floatFunc) error {
 	if err != nil {
 		return err
 	}
-	return c.push(res)
+	return c.Push(res)
 }
 
 func reduceFloat(initVal value.Value, vals []value.Value, f binFloatFunc) (value.Value, error) {
@@ -211,7 +206,7 @@ func (c *Clac) applyInt(arity int, f intFunc) error {
 	if err != nil {
 		return err
 	}
-	return c.push(res)
+	return c.Push(res)
 }
 
 func reduceInt(initVal value.Value, vals []value.Value, f binIntFunc) (value.Value, error) {
@@ -467,24 +462,24 @@ func hypot(x, y value.Value) (value.Value, error) {
 // RectToPolar converts 2D rectangular coordinates y,x to polar coordinates.
 func (c *Clac) RectToPolar() error {
 	e := &eval{}
-	y := e.e(func() (value.Value, error) { return c.pop() })
-	x := e.e(func() (value.Value, error) { return c.pop() })
+	y := e.e(func() (value.Value, error) { return c.Pop() })
+	x := e.e(func() (value.Value, error) { return c.Pop() })
 	radius := e.e(func() (value.Value, error) { return hypot(x, y) })
-	e.e(func() (value.Value, error) { return zero, c.push(radius) })
+	e.e(func() (value.Value, error) { return zero, c.Push(radius) })
 	angle := e.e(func() (value.Value, error) { return atan2(x, y) })
-	e.e(func() (value.Value, error) { return zero, c.push(angle) })
+	e.e(func() (value.Value, error) { return zero, c.Push(angle) })
 	return e.err
 }
 
 // PolarToRect converts 2D polar coordinates y<x to rectangular coordinates.
 func (c *Clac) PolarToRect() error {
 	e := &eval{}
-	angle := e.e(func() (value.Value, error) { return c.pop() })
-	radius := e.e(func() (value.Value, error) { return c.pop() })
+	angle := e.e(func() (value.Value, error) { return c.Pop() })
+	radius := e.e(func() (value.Value, error) { return c.Pop() })
 	x := e.binary(radius, "*", e.unary("cos", angle))
-	e.e(func() (value.Value, error) { return zero, c.push(x) })
+	e.e(func() (value.Value, error) { return zero, c.Push(x) })
 	y := e.binary(radius, "*", e.unary("sin", angle))
-	e.e(func() (value.Value, error) { return zero, c.push(y) })
+	e.e(func() (value.Value, error) { return zero, c.Push(y) })
 	return e.err
 }
 
@@ -691,7 +686,7 @@ func (c *Clac) dot(num int) error {
 	if e.err != nil {
 		return e.err
 	}
-	return c.push(dot)
+	return c.Push(dot)
 }
 
 // Cross returns the cross product of two 3D vectors
