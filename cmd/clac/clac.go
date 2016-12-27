@@ -228,11 +228,11 @@ func dmenuConv() error {
 	valStr := stackStr(clac.Stack{val})
 	have, err := exec.Command("dmenu", "-p", "clac: conv: have: "+valStr).Output()
 	if err != nil {
-		return errors.New("abort")
+		return clac.ErrNoHistUpdate
 	}
 	want, err := exec.Command("dmenu", "-p", "clac: conv: want:").Output()
 	if err != nil {
-		return errors.New("abort")
+		return clac.ErrNoHistUpdate
 	}
 	haveStr := valStr + " " + strings.TrimSpace(string(have))
 	wantStr := strings.TrimSpace(string(want))
