@@ -312,15 +312,13 @@ func processInput(input string) error {
 			if err = cl.Exec(func() error { return cl.Push(num) }); err != nil {
 				return fmt.Errorf("push: %s", err)
 			}
-			continue
-		}
-		if cmd, ok := cmdMap[tok]; ok {
+		} else if cmd, ok := cmdMap[tok]; ok {
 			if err := cl.Exec(cmd); err != nil {
 				return fmt.Errorf("%s: %s", tok, err)
 			}
-			continue
+		} else {
+			return fmt.Errorf("invalid input: \"%s\"", tok)
 		}
-		return fmt.Errorf("invalid input: \"%s\"", tok)
 	}
 	if err := scanner.Err(); err != nil {
 		return err
