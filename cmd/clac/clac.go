@@ -31,7 +31,7 @@ var (
 	doDmenu          = false
 	doInitStack      = false
 	doHexOut         = false
-	cliPrec     uint = 12
+	outPrec     uint = 12
 
 	cl      = clac.New()
 	lastErr error
@@ -139,7 +139,7 @@ func init() {
 	log.SetPrefix("clac: ")
 	flag.BoolVar(&doDmenu, "d", doDmenu, "dmenu mode")
 	flag.BoolVar(&doHexOut, "x", doHexOut, "hexidecimal output")
-	flag.UintVar(&cliPrec, "p", cliPrec, "output precision")
+	flag.UintVar(&outPrec, "p", outPrec, "output precision")
 	flag.BoolVar(&doInitStack, "i", doInitStack, "initialize stack")
 }
 
@@ -278,7 +278,7 @@ func stackStr(stack clac.Stack) string {
 	if doHexOut {
 		clac.SetFormat("%#x")
 	} else {
-		clac.SetFormat(fmt.Sprintf("%%.%dg", cliPrec))
+		clac.SetFormat(fmt.Sprintf("%%.%dg", outPrec))
 	}
 	for i := range stack {
 		val := stack[len(stack)-i-1]
